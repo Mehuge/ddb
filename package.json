@@ -1,0 +1,15 @@
+{
+  "name": "ddb",
+  "version": "0.0.1-alpha",
+  "description": "de-duplicating backup",
+  "main": "backup.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "austin.france@redskyit.com",
+  "license": "ISC",
+  "dependencies": {
+    "filecompare": "^1.0.4",
+    "sha256-file": "^1.0.0"
+  }
+}
