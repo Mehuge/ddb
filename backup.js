@@ -45,6 +45,9 @@ const NBACKUP_VERSION = '0.1.1-alpha';
 		case '--verbose':
 			backupOpts.verbose = true;
 			break;
+		case '--clean':
+			backupOpts.clean = true;
+			break;
 		}
 		++i;
 	}
@@ -66,6 +69,9 @@ const NBACKUP_VERSION = '0.1.1-alpha';
 			}))
 	});
 
+	// Clean backup destination
+	if (backupOpts.clean) await destination.clean({ verbose: backupOpts.verbose });
+
 	// Run the backup job
 	const job = new BackupJob({ destination, backupset });
 	if (backupOpts.backup) await job.start();
@@ -75,7 +81,7 @@ const NBACKUP_VERSION = '0.1.1-alpha';
 		await job.verify({
 			compare: backupOpts.compare,
 			verbose: backupOpts.verbose,
-			backupOpts.backup ? 'running' : 'current'
+			variant: backupOpts.backup ? 'running' : 'current'
 		});
 	}
 
