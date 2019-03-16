@@ -1,5 +1,7 @@
 const { BackupFileSystem, BackupDest, BackupSource, BackupSet, BackupJob } = require('./lib/backup');
 
+const path = require('path');
+
 const NBACKUP_VERSION = '0.1.1-alpha';
 
 (async function() {
@@ -14,7 +16,9 @@ const NBACKUP_VERSION = '0.1.1-alpha';
 	while (i < args.length) {
 		switch(args[i]) {
 		case '--to':
-			backupOpts.destination = args[++i];
+			let to = args[++i];
+			if (!path.isAbsolute(to)) to = path.join(process.cwd(), to);
+			backupOpts.destination = path.normalize(to);
 			break;
 		case '--backup':
 			backupOpts.backup = true;
@@ -33,7 +37,9 @@ const NBACKUP_VERSION = '0.1.1-alpha';
 			backupOpts.set = args[++i];
 			break;
 		case '--from':
-			source = { src: args[++i], excludes: [], includes: [] };
+			let src = args[++i];
+			if (!path.isAbsolute(src)) src = path.join(process.cwd(), src);
+			source = { src: path.normalize(src), excludes: [], includes: [] };
 			backupOpts.sources.push(source);
 			break;
 		case '--include':

@@ -13,7 +13,7 @@ versions (dev, beta, production) of a product often share a large amount of iden
 Consider then a development machine that has working copies of dev, beta and production, and installed
 copies for testing of each, we are talking a lot of duplicate files.
 
-A dumb backup system, backs up each one of these duplicate files, for each instance seen. Granted 
+A dumb backup system, backs up each one of these duplicate files, for each instance seen. Granted
 incremental backups don't copy those files unless they have changed, but even then if a branch is
 updated in several places, each place has a duplicate copy of the updated files.
 
@@ -36,7 +36,7 @@ I chose sha256 as the hashing algorithm (though this could be made configurable)
 a hash is that there are potentially collisions, though highly unlikely it is a possibility, so I had
 to build in some integrity checks into the system.
 
-sha256 hashs are 40 hexadecimal characters long. How should these be stored? I chose to use the 
+sha256 hashs are 40 hexadecimal characters long. How should these be stored? I chose to use the
 filesystem, but in order to keep directory sizes down, the hash is split accross a number of folders.
 The current system splits the hash into 2, 3, 4, 12, 12, 7 sized sections, as this keeps the initial
 folders from getting too large.
@@ -44,12 +44,12 @@ folders from getting too large.
 To handle potential hash clashes (two actually different files, with the same hash), by default the
 backup compares a hit in the file system byte-by-byte with the source file, and if they are different,
 will store the file as a variant. These variants are appended to the hash as .0 .1 .2 etc. I have yet
-to see this happen. To speed up backups, a --fast option can be specified which skips that integrity 
+to see this happen. To speed up backups, a --fast option can be specified which skips that integrity
 check.
 
 Backup Destinations
 --
-Backups target a destination (--to) which is either an non-existant or empty folder, or an existing 
+Backups target a destination (--to) which is either an non-existant or empty folder, or an existing
 backup destination. If the folder does not exist, or is empty it will be created and/or initialised.
 
 The backup filesystem is stored in files.db sub-folder, and backup sets (and their increments) are
@@ -79,7 +79,7 @@ backup).
 
 Work in progress
 ==
-This is very much a work in progress, indeed there isn't a restore option currently as I am still 
+This is very much a work in progress, indeed there isn't a restore option currently as I am still
 in the process of building the backup system.
 
 Todo:
@@ -97,3 +97,19 @@ Does not support:
 - not suited to backing up very large, changing files
 - does not store differences between versions of a file, but whole copies
 
+Usage
+==
+
+Backup to `L:\BACKUPS` all my documents from `D:\DOCS` except those in `D:\DOCS\TEMP` and `D:\DOCS\OTHER` unless it is `D:\DOCS\OTHER\IMPORTANT`. First, peform a cleanup of the destination, then backup, then verify the backup.
+
+```
+node backup.js \
+  --to L:\BACKUPS \
+  --set-name photos \
+  --from D:\DOCS \
+  --exclude TEMP\** \
+  --exclude OTHER\** \
+  --include OTHER\IMPORTANT\** \
+  --cleanup \
+  --backup \
+  --verify
