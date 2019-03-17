@@ -98,7 +98,7 @@ Example numbers:
 |Source|416,547| 63,691|6.05|
 |Backup|130,555|645,358|3.86|
 
-An indexed bucket system would use a database (sqlite3 perhaps) to store the hashes, and each hash would be allocated a bucket. The bucket relates to a folder in the file system, and are allocated as previous buckets fill up.
+An indexed bucket system would use a database (sqlite3 perhaps - no, turns out way too slow) to store the hashes, and each hash would be allocated a bucket. The bucket relates to a folder in the file system, and are allocated as previous buckets fill up.
 
 So one hash might be assigned to bucket 0, another to bucket 1 and so on.
 

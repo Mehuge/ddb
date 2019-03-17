@@ -20,6 +20,9 @@ const NBACKUP_VERSION = '0.1.1-alpha';
 			if (!path.isAbsolute(to)) to = path.join(process.cwd(), to);
 			backupOpts.destination = path.normalize(to);
 			break;
+		case '--fstype':
+			backupOpts.fstype = args[++i];
+			break;
 		case '--backup':
 			backupOpts.backup = true;
 			break;
@@ -62,6 +65,7 @@ const NBACKUP_VERSION = '0.1.1-alpha';
 	const destination = new BackupDest({
 		destination: backupOpts.destination,
 		filesystem: new BackupFileSystem({ fast: backupOpts.fast }),
+		fstype: backupOpts.fstype,
 		verbose: backupOpts.verbose,
 	});
 	await destination.init(backupOpts.backup);
