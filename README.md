@@ -85,6 +85,10 @@ in the process of building the backup system.
 Todo:
 
 - restore option (kindof useful)
+- compression support (store indexes and blobs using zlib)
+- exclude-file
+
+Done:
 - filesystem cleanup (remove files in the file system no longer referenced by any increment)
 - include and exclude files/paths
 
@@ -102,14 +106,20 @@ Usage
 
 Backup to `L:\BACKUPS` all my documents from `D:\DOCS` except those in `D:\DOCS\TEMP` and `D:\DOCS\OTHER` unless it is `D:\DOCS\OTHER\IMPORTANT`. First, peform a cleanup of the destination, then backup, then verify the backup.
 
+Backup
+--
 ```
-node backup.js \
-  --to L:\BACKUPS \
-  --set-name photos \
-  --from D:\DOCS \
-  --exclude TEMP\** \
-  --exclude OTHER\** \
-  --include OTHER\IMPORTANT\** \
-  --cleanup \
-  --backup \
-  --verify
+node backup.js --to L:\BACKUPS\DDB --fast --set-name ddb --from . --exclude node_modules --exclude .git --backup --verify --verbose
+```
+
+Verify the contents of a backup
+--
+```
+node backup.js --to L:\BACKUPS\DDB --set-name ddb --verify --verbose
+```
+
+Verify and compare the contents of a backup
+--
+```
+node backup.js --to L:\BACKUPS\DDB --set-name ddb --verify-and-compare --verbose
+```
