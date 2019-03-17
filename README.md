@@ -128,6 +128,10 @@ The filesystem is implemented in the `BackupFileSystem` class.
 - add reporting options (email, status file ...)
 - networking (add ability to backup over the network - --server mode)
 - a better file system
+- --move-set move a backup set from one backup destination to another.
+- --archive archive a backup destination
+- --compress compress uncompressed file system entries / compress as backing up
+
 
 **Done:**
 
@@ -163,3 +167,9 @@ Verify and compare the contents of a backup
 ```
 node backup.js --to L:\BACKUPS\DDB --set-name ddb --verify-and-compare --verbose
 ```
+
+Other fun facts
+==
+If you backup into a destination, then later change your mind. Just remove the instances of that backup set (delete the index files) and run a --clean.
+
+If you want to split a backup destination that contains multiple backup sets, so for example, you want to split backup set A from the backup destination into another backup destination, simply copy the backup destination to a new location, then remove the instances you don't want in each destination and run --clean. It would even be feasable to add a --move option to move a backup set from one backup destination to another.

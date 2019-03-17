@@ -64,6 +64,7 @@ const NBACKUP_VERSION = '0.1.1-alpha';
 		filesystem: new BackupFileSystem({ fast: backupOpts.fast }),
 		verbose: backupOpts.verbose,
 	});
+	await destination.init(backupOpts.backup);
 	const backupset = new BackupSet({
 		name: backupOpts.set,
 		sources: backupOpts.backup && backupOpts.sources.map
@@ -74,12 +75,14 @@ const NBACKUP_VERSION = '0.1.1-alpha';
 				verbose: backupOpts.verbose,
 			}))
 	});
+	const job = new BackupJob({ destination, backupset });
 
 	// Clean backup destination
-	if (backupOpts.clean) await destination.clean({ verbose: backupOpts.verbose });
+	if (backupOpts.clean) {
+		await await job.clean({ verbose: backupOpts.verbose });
+	}
 
 	// Run the backup job
-	const job = new BackupJob({ destination, backupset });
 	if (backupOpts.backup) await job.start();
 
 	// If asked to verify, verify
