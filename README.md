@@ -79,16 +79,23 @@ backup).
 
 Work in progress
 ==
-This is very much a work in progress, indeed there isn't a restore option currently as I am still
-in the process of building the backup system.
+This is very very much a work in progress, the project is a few days old, indeed there isn't a restore option currently as I am still in the process of designing and building the backup format.
 
-Todo:
+The backup destination should be compressed to further reduce the space occupied by the backup. Each file stored in the hash based file system should be compressed, as should each instance index. It should be an optional feature, as it will add an overhead when backing up. Ideally it should be possible to compress after backup, so the filesystem should be able to cope with a mix of compressed and uncompressed entries. Also add an option to compress the file system at a later time. At present you can archive a backup using tar z to achieve a very small archive compared to the original folder.
 
-- restore option (kindof useful)
-- compression support (store indexes and blobs using zlib)
-- exclude-file
+Because of the nature of the backup format, the hash based file system that is used to store files, managing increments is really simple, for instance to remove the first backup, just delete its index, don't need to merge it with the next increment. Once an increment or increments have been removed, then run a cleanup on the filesystem which will check all the hashs still in use by increments, and remove ones that are no longer referenced. This can be done separately from the removal of the increment.
 
-Done:
+**Todo:**
+
+- add a restore option (would be kind of useful)
+- use compression (store indexes and blobs as .gz files)
+- --exclude-file list excludes in a file (like .gitignore)
+- --remove-older remove backup instances older than a specified age
+- --list a backup (like --verify --verbose but without verifying)
+- Ability to select an increment to list / verify / support
+
+**Done:**
+
 - filesystem cleanup (remove files in the file system no longer referenced by any increment)
 - include and exclude files/paths
 
@@ -101,10 +108,8 @@ Does not support:
 - not suited to backing up very large, changing files
 - does not store differences between versions of a file, but whole copies
 
-Usage
+Usage Examples
 ==
-
-Backup to `L:\BACKUPS` all my documents from `D:\DOCS` except those in `D:\DOCS\TEMP` and `D:\DOCS\OTHER` unless it is `D:\DOCS\OTHER\IMPORTANT`. First, peform a cleanup of the destination, then backup, then verify the backup.
 
 Backup
 --
