@@ -85,6 +85,37 @@ The backup destination should be compressed to further reduce the space occupied
 
 Because of the nature of the backup format, the hash based file system that is used to store files, managing increments is really simple, for instance to remove the first backup, just delete its index, don't need to merge it with the next increment. Once an increment or increments have been removed, then run a cleanup on the filesystem which will check all the hashs still in use by increments, and remove ones that are no longer referenced. This can be done separately from the removal of the increment.
 
+Backup server mode. This would use the network to comminicate with the backup destination using a simple tcp based protocol. e.g. `EXISTS <hash.var> <size>`, `PUT <hash> <size> <stats>\n<data>`, `VERIFY <hash.var>`, `GET-INSTANCE <name>`, `GET-FILE <hash.var>` and so on. This is necessary so that hashes are calculated locally not over the network which would be very slow. The aim being that the only things transfered over the network would be files that needed backing up.
+
+**File System**
+
+The file system currently used just uses files and folders, and one drawback is the number of folders required to store files is a factor. In order to store 10 files potentially requires 50 folders to be created. That is a huge overhead. Replacing that with some kind of indexed bucket based file system would reduce that overhead.  The problem the filesystem is trying to solve is avoiding having a single directory with 100,000s files, at that stresses operating systems.
+
+Example numbers:
+
+|      |files  |folders|GB  |
+|------|------:|------:|---:|
+|Source|416,547| 63,691|6.05|
+|Backup|130,555|645,358|3.86|
+
+An indexed bucket system would use a database (sqlite3 perhaps) to store the hashes, and each hash would be allocated a bucket. The bucket relates to a folder in the file system, and are allocated as previous buckets fill up.
+
+So one hash might be assigned to bucket 0, another to bucket 1 and so on.
+
+```
+files.db/index.db
+  XXXX <size> 0 0
+  XXXY <size> 0 1
+  XXXZ <size> 0 2
+files.db/buckets/0000000000/XXXX.<size>.0
+files.db/buckets/0000000000/XXXY.<size>.0
+files.db/buckets/0000000001/XXXZ.<size>.0
+```
+
+The number of entries per bucket could be configurable.
+
+The filesystem is implemented in the `BackupFileSystem` class.
+
 **Todo:**
 
 - add a restore option (would be kind of useful)
@@ -92,7 +123,11 @@ Because of the nature of the backup format, the hash based file system that is u
 - --exclude-file list excludes in a file (like .gitignore)
 - --remove-older remove backup instances older than a specified age
 - --list a backup (like --verify --verbose but without verifying)
-- Ability to select an increment to list / verify / support
+- add ability to select an increment to list / verify / support
+- add support for backup configs `node backup.js --config <path-to-config>`
+- add reporting options (email, status file ...)
+- networking (add ability to backup over the network - --server mode)
+- a better file system
 
 **Done:**
 
