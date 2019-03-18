@@ -89,24 +89,13 @@ Backup server mode. This would use the network to comminicate with the backup de
 
 **File System**
 
-The file system currently used just uses files and folders, and one drawback is the number of folders required to store files is a factor. In order to store 10 files potentially requires 50 folders to be created. That is a huge overhead. Replacing that with some kind of indexed bucket based file system would reduce that overhead.  The problem the filesystem is trying to solve is avoiding having a single directory with 100,000s files, at that stresses operating systems.
-
-Example numbers:
-
-|      |files  |folders|GB  |
-|------|------:|------:|---:|
-|Source|416,547| 63,691|6.05|
-|Backup|130,555|645,358|3.86|
-
 The filesystem is implemented in the `BackupFileSystem` class. The filesystem has an fstype, which is currently one of `hash-v1`, `hash-v2` or `hash-v3` which are implemented in turn by `HashFileSystemV1`, `HashFileSystemV2` and `HashFileSystemV3`.
 
-`hash-v1` is the initial implementation which suffers the drawbacks mentioned above. It is however very fast.
+`hash-v1` is the initial implementation which while being fast, and avoids having folders with large numbers of files, it's problem is it generates a lot of folders (up to 5 folders per hased file).
 
-`hash-v2` is an indexed bucket file system, using sqlite3 as the index. It turns out this is very slow to track the hashes in the buckets in SQL.
+`hash-v2` is an indexed bucket file system, using sqlite3 as the index. It turns out this is very slow (on windows) and slower (x2) on macos because to track the hashes in the buckets it maintains an indes in SQL. Integrity is also an issue as its possible for the index to get out of step with the file store.
 
-`hash-v3` is in development, is based on `hash-v1` but uses a very simple crc8 + crc8 bucket system which limits the `files.db` and child-folders to 256 entries, with the hashed files stored as a leaf node. The folders containing the leaf nodes will grow but testing suggests the growth is fairly evenly spread across the buckets, so growth is slow. This means that the system could store 16 million files and only have around 256 hashed files per bucket. It also means that the file system will use at most 65,536 folders, solving the problem with `hash-v1` whilst being potentially faster. Because the bucket is chosen using a hash of the file hash, there is no need to maintain an index of the hashes.
-
-
+`hash-v3` is the latest version and is similar to `hash-v1` but uses a very simple crc8 + crc8 bucket system which limits the `files.db` and child-folders to 256 entries max, with the hashed files stored as a leaf node. The folders containing the leaf nodes will grow but testing suggests the growth is fairly evenly spread across the buckets, so growth is slow. This means that the system could store 16 million files and only have around 256 hashed files per bucket. It also means that the file system will use at most 65,536 folders regardless of the numbers of files, solving the main problem with `hash-v1` whilst also being faster (less folders to manage). Because the bucket is chosen using a hash of the file hash, there is no need to maintain an index of the hashes, so does not suffer from the problems with `hash-v2` of being slow, and risks to integrity.
 
 **Todo:**
 
