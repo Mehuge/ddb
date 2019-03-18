@@ -98,23 +98,15 @@ Example numbers:
 |Source|416,547| 63,691|6.05|
 |Backup|130,555|645,358|3.86|
 
-An indexed bucket system would use a database (sqlite3 perhaps - no, turns out way too slow) to store the hashes, and each hash would be allocated a bucket. The bucket relates to a folder in the file system, and are allocated as previous buckets fill up.
+The filesystem is implemented in the `BackupFileSystem` class. The filesystem has an fstype, which is currently one of `hash-v1`, `hash-v2` or `hash-v3` which are implemented in turn by `HashFileSystemV1`, `HashFileSystemV2` and `HashFileSystemV3`.
 
-So one hash might be assigned to bucket 0, another to bucket 1 and so on.
+`hash-v1` is the initial implementation which suffers the drawbacks mentioned above. It is however very fast.
 
-```
-files.db/index.db
-  XXXX <size> 0 0
-  XXXY <size> 0 1
-  XXXZ <size> 0 2
-files.db/buckets/0000000000/XXXX.<size>.0
-files.db/buckets/0000000000/XXXY.<size>.0
-files.db/buckets/0000000001/XXXZ.<size>.0
-```
+`hash-v2` is an indexed bucket file system, using sqlite3 as the index. It turns out this is very slow to track the hashes in the buckets in SQL.
 
-The number of entries per bucket could be configurable.
+`hash-v3` is in development, is based on `hash-v1` but uses a very simple crc8 + crc8 bucket system which limits the `files.db` and child-folders to 256 entries, with the hashed files stored as a leaf node. The folders containing the leaf nodes will grow but testing suggests the growth is fairly evenly spread across the buckets, so growth is slow. This means that the system could store 16 million files and only have around 256 hashed files per bucket. It also means that the file system will use at most 65,536 folders, solving the problem with `hash-v1` whilst being potentially faster. Because the bucket is chosen using a hash of the file hash, there is no need to maintain an index of the hashes.
 
-The filesystem is implemented in the `BackupFileSystem` class.
+
 
 **Todo:**
 

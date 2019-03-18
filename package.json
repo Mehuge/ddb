@@ -9,6 +9,7 @@
   "author": "austin.france@redskyit.com",
   "license": "ISC",
   "dependencies": {
+    "crc": "^3.8.0",
     "filecompare": "^1.0.4",
     "ignore": "^5.0.5",
     "sha256-file": "^1.0.0",
