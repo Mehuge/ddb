@@ -97,6 +97,8 @@ The filesystem is implemented in the `BackupFileSystem` class. The filesystem ha
 
 `hash-v3` is the latest version and is similar to `hash-v1` but uses a very simple crc8 + crc8 bucket system which limits the `files.db` and child-folders to 256 entries max, with the hashed files stored as a leaf node. The folders containing the leaf nodes will grow but testing suggests the growth is fairly evenly spread across the buckets, so growth is slow. This means that the system could store 16 million files and only have around 256 hashed files per bucket. It also means that the file system will use at most 65,536 folders regardless of the numbers of files, solving the main problem with `hash-v1` whilst also being faster (less folders to manage). Because the bucket is chosen using a hash of the file hash, there is no need to maintain an index of the hashes, so does not suffer from the problems with `hash-v2` of being slow, and risks to integrity.
 
+![Backup FileSystem V3](docs/backup-filesystem-v3.png)
+
 **Todo:**
 
 - add a restore option (would be kind of useful)
