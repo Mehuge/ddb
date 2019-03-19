@@ -36,9 +36,9 @@ I chose sha256 as the hashing algorithm (though this could be made configurable)
 a hash is that there are potentially collisions, though highly unlikely it is a possibility, so I had
 to build in some integrity checks into the system.
 
-sha256 hashs are 40 hexadecimal characters long. How should these be stored? I chose to use the
+sha256 hashs are 64 hexadecimal characters long. How should these be stored? I chose to use the
 filesystem, but in order to keep directory sizes down, the hash is split accross a number of folders.
-The current system splits the hash into 2, 3, 4, 12, 12, 7 sized sections, as this keeps the initial
+The current system splits the hash into 2, 3, 4, 12, 12, 31 sized sections, as this keeps the initial
 folders from getting too large.
 
 To handle potential hash clashes (two actually different files, with the same hash), by default the
