@@ -1,4 +1,4 @@
-const { BackupFileSystem, BackupDest, BackupSource, BackupSet, BackupJob, BackupOptions } = require('./lib/backup');
+const { BackupFileSystem, BackupDest, BackupSource, BackupSet, BackupJob, BackupOptions, BackupInstance } = require('./lib/backup');
 
 class Backup {
 	static async exec(args) {
@@ -47,7 +47,7 @@ class Backup {
 			await job.verify({
 				compare: opts.compare,
 				verbose: opts.verbose,
-				variant: opts.backup ? 'running' : 'current'
+				when: opts.backup ? 'running' : 'current'
 			});
 		}
 
