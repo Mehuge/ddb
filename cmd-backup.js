@@ -21,7 +21,7 @@ class Backup {
 
     // Clean backup destination
     if (opts.clean) {
-      await destination.clean(opts);
+      await destination.clean();
     }
 
     // Setup backup set
@@ -47,7 +47,7 @@ class Backup {
       await job.verify({
         compare: opts.compare,
         verbose: opts.verbose,
-        when: opts.backup ? 'running' : 'current'
+        when: opts.backup ? 'running' : (opts.when || 'current')
       });
     }
 
