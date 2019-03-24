@@ -162,3 +162,15 @@ Lists the contents of a backup instance. The `--when` option takes the instance 
 node ddb.js list L:\BACKUPS\DDB --set-name ddb --when 2019-03-22T20:59:52.958Z --sources
 ```
 Lists the backup sources (the from directories) in a backup. This is useful if the backup set contains multiple sources, and may be required to specify which source when performing a restore.
+
+Restore
+--
+```
+node ddb.js restore K:/BACKUPS/DDB --set-name ddb --output=D:\TEMP\RESTORE --verbose
+```
+Restore the last (current) backup for backup set `ddb` and restore it to `D:\TEMP\RESTORE`.
+
+```
+node ddb.js restore K:/BACKUPS/DDB --set-name ddb --output=D:\TEMP\RESTORE --exclude ** --include lib --verbose
+```
+Restore the `lib` sub-folder of the last (current) backup for backup set `ddb` and restore it to `D:\TEMP\RESTORE`.
