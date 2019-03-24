@@ -30,11 +30,7 @@ class Restore {
 
 		// Create backup job
     const job = new BackupRestore({ destination, backupset });
-    if (opts.output) {
-      job.restore(opts.output);
-    } else {
-      console.log('cowardly refusing to overwrite backup source, please specify --output or --overwrite-source');
-    }
+		job.restore(opts);
 	}
 };
 
