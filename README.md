@@ -49,39 +49,34 @@ check.
 
 Backup Destinations
 --
-Backups target a destination (--to) which is either an non-existant or empty folder, or an existing
+Backups target a destination which is either an non-existant or empty folder, or an existing
 backup destination. If the folder does not exist, or is empty it will be created and/or initialised.
 
 The backup filesystem is stored in files.db sub-folder, and backup sets (and their increments) are
-stored in the backups subfolder.  There is a config.json which contains the format version of the
+stored in the `backups` subfolder.  There is a config.json which contains the format version of the
 backup destination.
 
-Backup destinations are designed to be shared. The more it is shared, the more de-duplication occures.
+Backup destinations (`--dest`) are designed to be shared. The more it is shared, the more de-duplication occures.
 It is possible to have a separate backup destination for each backup, and that will de-duplicate
 files within that backup, but the destination can also be shared by multiple backup sets.
 
 Backup Set
 --
-A backup set (--set-name) is a named backup placed stored in a backup destination. It has increments
-and a current marker. The default backup set if not specified is named default. A backup set can
-specify one or more backup sources (--from).
+A backup set (`--set-name`) is a named backup placed in a backup destination. It has increments and a current marker. The default backup set if not specified is named default. A backup set can specify one or more backup sources (--from).
 
 Backup Source
 --
-A backup source (--from) is a root path and optionally include and exclude patterns for filtering
-(filtering not yet implemented) and tells the backup which files to back up.
+A backup source (--from) is a root path and optionally include and exclude patterns for filtering and tells the backup which files to back up.
 
 Incremental backups
 --
-The concept of full, differential or incremental backups doesn't make sense in this backup system.
-Every backup is incremental, the first backup just happens to be the largest increment (a full
-backup).
+The concept of full, differential or incremental backups doesn't make sense in this backup system. Every backup is incremental, the first backup just happens to be the largest increment (a full backup).
 
 Work in progress
 ==
-This is very very much a work in progress, the project is a few days old, indeed there isn't a restore option currently as I am still in the process of designing and building the backup format.
+This is very very much a work in progress, the project is still only a few weeks old.
 
-The backup destination should be compressed to further reduce the space occupied by the backup. Each file stored in the hash based file system should be compressed, as should each instance index. It should be an optional feature, as it will add an overhead when backing up. Ideally it should be possible to compress after backup, so the filesystem should be able to cope with a mix of compressed and uncompressed entries. Also add an option to compress the file system at a later time. At present you can archive a backup using tar z to achieve a very small archive compared to the original folder.
+The backup destination should be compressed to further reduce the space occupied by the backup. Each file stored in the hash based file system should be compressed, as should each instance index. It should be an optional feature, as it will add an a time overhead when backing up. Ideally it should be possible to compress after backup, so the filesystem should be able to cope with a mix of compressed and uncompressed entries. Also add an option to compress the file system at a later time. At present you can archive a backup using tar.gz to achieve a very small archive compared to the original folder.
 
 Because of the nature of the backup format, the hash based file system that is used to store files, managing increments is really simple, for instance to remove the first backup, just delete its index, don't need to merge it with the next increment. Once an increment or increments have been removed, then run a cleanup on the filesystem which will check all the hashs still in use by increments, and remove ones that are no longer referenced. This can be done separately from the removal of the increment.
 
@@ -90,6 +85,8 @@ Backup server mode. This would use the network to comminicate with the backup de
 **File System**
 
 The filesystem is implemented in the `BackupFileSystem` class. The filesystem has an fstype, which is currently one of `hash-v1`, `hash-v2` or `hash-v3` which are implemented in turn by `HashFileSystemV1`, `HashFileSystemV2` and `HashFileSystemV3`.
+
+*Note: v3 is the default filesystem, v1 and v2 will be dropped as they don't perform well enough. v3 needs some further optimisation, but will become the default and only fs supported*
 
 `hash-v1` is the initial implementation which while being fast, and avoids having folders with large numbers of files, it's problem is it generates a lot of folders (up to 5 folders per hased file).
 
@@ -101,30 +98,25 @@ The filesystem is implemented in the `BackupFileSystem` class. The filesystem ha
 
 **Todo:**
 
-- add a restore option (would be kind of useful)
-- use compression (store indexes and blobs as .gz files)
-- --exclude-file list excludes in a file (like .gitignore)
-- --remove-older remove backup instances older than a specified age
-- --list a backup (like --verify --verbose but without verifying)
-- add ability to select an increment to list / verify / support
-- add support for backup configs `node backup.js --config <path-to-config>`
-- add reporting options (email, status file ...)
-- networking (add ability to backup over the network - --server mode)
-- a better file system
-- --move-set move a backup set from one backup destination to another.
-- --archive archive a backup destination
-- --compress compress uncompressed file system entries / compress as backing up
-
-
-**Done:**
-
-- filesystem cleanup (remove files in the file system no longer referenced by any increment)
-- include and exclude files/paths
+- [x] filesystem cleanup (remove files in the file system no longer referenced by any increment)
+- [ ] add a restore option (would be kind of useful)
+- [ ] use compression (store indexes and blobs as .gz files)
+- [x] include and exclude files/paths
+- [ ] --exclude-file list excludes in a file (like .gitignore)
+- [ ] --remove-older remove backup instances older than a specified age
+- [x] --list a backup (like --verify --verbose but without verifying)
+- [x] add ability to select an increment to list / verify / support
+- [ ] add support for backup configs `node backup.js --config <path-to-config>`
+- [ ] add reporting options (email, status file ...)
+- [ ] networking (add ability to backup over the network - --server mode)
+- [x] a better file system
+- [ ] --move-set move a backup set from one backup destination to another.
+- [ ] --archive archive a backup destination
+- [ ] --compress compress uncompressed file system entries / compress as backing up
 
 Limitations
 ==
-Does not support:
-- restore from backup (yet)
+Does not nor any plans to support:
 - windows permissions
 - unix extended permissions
 - not suited to backing up very large, changing files
@@ -136,23 +128,37 @@ Usage Examples
 Backup
 --
 ```
-node backup.js --to L:\BACKUPS\DDB --fast --set-name ddb --from . --exclude node_modules --exclude .git --backup --verify --verbose
+node ddb.js backup L:\BACKUPS\DDB --fast --set-name ddb --from . --exclude node_modules --exclude .git --verify --verbose
 ```
+Backs up the current directory (`--from .`) to `L:\BACKUPS\DDB` using the fast option (relies on hashes being unique) a backup set named `ddb` that includes all files except those beginning `node_modules` and `.git`.
 
 Verify the contents of a backup
 --
 ```
-node backup.js --to L:\BACKUPS\DDB --set-name ddb --verify --verbose
+node ddb.js verify L:\BACKUPS\DDB --set-name ddb --verbose
 ```
+Verify the `ddb` backup verbosely (same as specifying `--verify` during the backup).
 
-Verify and compare the contents of a backup
+Verify and compare
 --
 ```
 node backup.js --to L:\BACKUPS\DDB --set-name ddb --verify-and-compare --verbose
 ```
+Like verify excpet that the backup files for the current instance are compared (byte-for-byte) with the originals.
 
-Other fun facts
-==
-If you backup into a destination, then later change your mind. Just remove the instances of that backup set (delete the index files) and run a --clean.
+List backups
+--
+```
+node ddb.js list L:\BACKUPS\DDB --set-name ddb
+```
+List all the instances for a backup set. Returns the timestamp, file count, size and time taken to run the backup.
 
-If you want to split a backup destination that contains multiple backup sets, so for example, you want to split backup set A from the backup destination into another backup destination, simply copy the backup destination to a new location, then remove the instances you don't want in each destination and run --clean. It would even be feasable to add a --move option to move a backup set from one backup destination to another.
+```
+node ddb.js list L:\BACKUPS\DDB --set-name ddb --when 2019-03-22T20:59:52.958Z
+```
+Lists the contents of a backup instance. The `--when` option takes the instance time as an ISO format string, or can specify current to mean the last available instance.
+
+```
+node ddb.js list L:\BACKUPS\DDB --set-name ddb --when 2019-03-22T20:59:52.958Z --sources
+```
+Lists the backup sources (the from directories) in a backup. This is useful if the backup set contains multiple sources, and may be required to specify which source when performing a restore.
