@@ -1,4 +1,4 @@
-const { BackupFileSystem, BackupDest, BackupSource, BackupSet, BackupList, BackupOptions } = require('./lib/backup');
+const { BackupFileSystem, BackupTarget, BackupSource, BackupSet, BackupList, BackupOptions } = require('./lib');
 
 class List {
   static async exec(args) {
@@ -7,16 +7,12 @@ class List {
     const opts = (new BackupOptions()).parse(args);
 
     // Configure backup from options
-    const destination = new BackupDest({
-      destination: opts.destination,
-      filesystem: new BackupFileSystem({ fast: opts.fast }),
-      fstype: opts.fstype,
-      verbose: opts.verbose,
-    });
-    await destination.init(false);
+    const { fast, fstype, verbose, destination } = opts;
+    const target = new BackupTarget({ destination, fast, fstype, verbose });
+    await target.connect(false);
 
     // Create backup job
-    const job = new BackupList({ destination });
+    const job = new BackupList({ target });
     job.list(opts);
   }
 };

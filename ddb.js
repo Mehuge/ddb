@@ -32,6 +32,9 @@ async function run(args) {
       case 'clean':
         await exec('./cmd-clean', args);
         return;
+      case 'server':
+        await exec('./cmd-server', args);
+        return;
     }
     args.shift();
   }
