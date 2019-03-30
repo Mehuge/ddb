@@ -1,26 +1,24 @@
-const { BackupOptions, BackupDest, BackupFileSystem } = require('./lib');
+const { BackupOptions, BackupTarget, BackupSet, BackupJob, BackupList } = require('./lib');
 const http = require('http');
+const url = require('url');
 
 class BackupServer {
   static async exec(args) {
     const opts = (new BackupOptions()).parse(args);
 
     // Configure backup from options
-    const destination = new BackupDest({
-      destination: opts.destination,
-      filesystem: new BackupFileSystem({ fast: opts.fast }),
-      verbose: opts.verbose,
-    });
-    await destination.init(false);
+    const { destination, fast, verbose } = opts;
+    const target = new BackupTarget({ destination, fast, verbose });
+    await target.connect(true);
 
     const port = opts.port || 4444;
     const bind = opts.bind || '0.0.0.0';
-    const server = new BackupServer({ destination, port, bind });
+    const server = new BackupServer({ target, port, bind });
     await server.run();
   }
 
-  constructor({ destination, port, bind }) {
-    this.destination = destination;
+  constructor({ target, port, bind }) {
+    this.target = target;
     this.port = port;
     this.bind = bind;
   }
@@ -68,24 +66,48 @@ class BackupServer {
   async handleRequest(request, response) {
     try {
       console.dir(`${request.method} ${request.url}`);
-      const parts = request.url.split('?');
-      const path = parts.shift().split('/').slice(1);
-      const query = parts.join('?').split('&');
-      switch(path[0]) {
+      const uri = url.parse(request.url, true);
+      const parts = uri.pathname.split('/').slice(1);
+      const target = this.target;
+      let name, when, backupset, verbose, job;
+      switch(parts.shift()) {
         case 'fs':
-          switch(path[1]) {
+          switch(parts.shift()) {
             case 'has':
-              const key = path[2].split('.');
-              const has = await this.destination.fs().has(key[2], key[0], key[1]);
+              const key = parts.shift().split('.');
+              const has = await target.fs().has(key[2], key[0], key[1]);
               response.writeHead(has ? 200 : 404);
               response.end();
               return;
             case 'clean':
-              await this.destination.clean();
+              await this.target.clean();
               response.writeHead(200);
               response.end();
               return;
           }
+          break;
+        case 'verify':
+          name = parts.shift();
+          when = parts.shift() || 'current';
+          backupset = new BackupSet({ name })
+          verbose = "verbose" in uri.query;
+          job = new BackupJob({ target, backupset });
+          response.writeHead(200, { 'Content-Type': 'text/plain' });
+          await job.verify({ when, verbose, log: (s) => {
+            response.write(s+'\n');
+          }});
+          response.end();
+          return;
+        case 'list':
+          name = parts.shift();
+          when = parts.shift();
+          const filter = {};
+          job = new BackupList({ target });
+          response.writeHead(200, { 'Content-Type': 'text/plain' });
+          await job.list({ setname: name, when, filter, log: (s) => {
+            response.write(s+'\n');
+          }});
+          response.end();
           break;
       }
       response.writeHead(400);

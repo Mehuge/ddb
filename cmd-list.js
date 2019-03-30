@@ -13,7 +13,7 @@ class List {
 
     // Create backup job
     const job = new BackupList({ target });
-    job.list(opts);
+    await job.list(opts);
   }
 };
 

@@ -1,4 +1,4 @@
-const { BackupFileSystem, BackupDest, BackupSet, BackupJob, BackupOptions, BackupInstance } = require('./lib');
+const { BackupTarget, BackupSet, BackupJob, BackupOptions } = require('./lib');
 
 class Verify {
   static async exec(args) {
@@ -7,12 +7,9 @@ class Verify {
     const opts = (new BackupOptions()).parse(args);
 
     // Configure backup from options
-    const destination = new BackupDest({
-      destination: opts.destination,
-      filesystem: new BackupFileSystem({ fast: opts.fast }),
-      verbose: opts.verbose,
-    });
-    await destination.init(false);
+    const { destination, verbose } = opts;
+    const target = new BackupTarget({ destination, verbose });
+    await target.connect(false);
 
     if (!opts.set) throw new Error('missing --set-name argument');
 
@@ -20,7 +17,7 @@ class Verify {
     const backupset = new BackupSet({ name: opts.set });
 
     // Create backup job
-    const job = new BackupJob({ destination, backupset });
+    const job = new BackupJob({ target, backupset });
 
     // Verify the backup
     await job.verify({
