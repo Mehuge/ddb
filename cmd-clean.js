@@ -1,4 +1,4 @@
-const { BackupTarget, BackupOptions } = require('./lib/backup');
+const { BackupTarget, BackupOptions } = require('./lib');
 
 class Clean {
   static async exec(args) {

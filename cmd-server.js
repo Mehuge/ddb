@@ -1,4 +1,4 @@
-const { BackupOptions, BackupTarget, BackupSet, BackupJob, BackupList } = require('./lib');
+const { BackupOptions, BackupTarget } = require('./lib');
 const http = require('http');
 const url = require('url');
 
@@ -69,7 +69,7 @@ class BackupServer {
       const uri = url.parse(request.url, true);
       const parts = uri.pathname.split('/').slice(1);
       const target = this.target;
-      let name, when, backupset, verbose, job;
+      let setname, when, verbose;
       switch(parts.shift()) {
         case 'fs':
           switch(parts.shift()) {
@@ -87,24 +87,21 @@ class BackupServer {
           }
           break;
         case 'verify':
-          name = parts.shift();
+          setname = parts.shift();
           when = parts.shift() || 'current';
-          backupset = new BackupSet({ name })
           verbose = "verbose" in uri.query;
-          job = new BackupJob({ target, backupset });
           response.writeHead(200, { 'Content-Type': 'text/plain' });
-          await job.verify({ when, verbose, log: (s) => {
+          await this.target.verify({ setname, when, verbose, log: (s) => {
             response.write(s+'\n');
           }});
           response.end();
           return;
         case 'list':
-          name = parts.shift();
+          setname = parts.shift();
           when = parts.shift();
           const filter = {};
-          job = new BackupList({ target });
           response.writeHead(200, { 'Content-Type': 'text/plain' });
-          await job.list({ setname: name, when, filter, log: (s) => {
+          await this.target.list({ setname, when, filter, log: (s) => {
             response.write(s+'\n');
           }});
           response.end();
