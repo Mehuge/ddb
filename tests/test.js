@@ -1,16 +1,17 @@
-const Filter = require('../lib/filter');
+const fs = require('../lib/fs');
 
 function expect(r, e) {
   console.log(r === e ? 'pass' : 'fail');
 }
 
-let f = new Filter({ excludes: [ '**' ], includes: [ '**/saved', '**/somefile.txt' ] });
-expect(true, f.ignores('somefile.txt'));
-expect(false, f.ignores('UnrealTournament/somefile.txt'));
-expect(false, f.ignores('UnrealTournament/saved/somefile.txt'));
+let undefined;
 
-f = new Filter({ excludes: [ '**/node_modules', '**/somefile.txt' ] });
-expect(false, f.ignores('somefile.txt'));
-expect(true, f.ignores('node_modules/somefile.txt'));
-expect(false, f.ignores('node_modules/module/package.json'));
-expect(true, f.ignores('UnrealTournament/node_modules/module/package.json'));
+(async function() {
+  expect(undefined, await fs.zip('test.js', 'test.js.gz'));
+  expect(undefined, await fs.unzip('test.js.gz', 'test.js.unzipped'));
+  expect(undefined, await fs.compare('test.js.unzipped', 'test.js'));
+  expect(undefined, await fs.compareZipWith('test.js.gz', 'test.js'));
+  expect(undefined, await fs.compareZipWith('test.js.gz', 'test.js.unzipped'));
+  expect(undefined, await fs.unlink('test.js.gz'));
+  expect(undefined, await fs.unlink('test.js.unzipped'));
+})();
