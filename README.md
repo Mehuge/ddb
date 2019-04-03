@@ -37,7 +37,7 @@ sha256 hashs are 64 hexadecimal characters long. These are stored in a folder ca
 To handle potential hash clashes (two actually different files, with the same hash), by default the
 backup compares a hit in the hash file system byte-by-byte with the source file, and if they are different, will store the file as a variant. These variant numbers are appended to the hash as .0 .1 .2 etc. I have yet to see this happen.
 
-There is a --fast option which skips this aditional integrity, and the soon to come client/server version will by use --fast.
+There is a --fast option which skips this aditional integrity, and the soon to come client/server version will by default use --fast.
 
 Backup Targets
 --
