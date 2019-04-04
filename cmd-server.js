@@ -1,4 +1,4 @@
-const { BackupOptions, BackupTarget } = require('./lib');
+const { BackupInstance, BackupOptions, BackupTarget } = require('./lib');
 const http = require('http');
 const url = require('url');
 
@@ -17,10 +17,28 @@ class BackupServer {
     await server.run();
   }
 
+  static getRequestBody(request) {
+    console.log('getRequestBody');
+    return new Promise((resolve, reject) => {
+      let body = [];
+      request.on('data', chunk => {
+        body.push(chunk);
+        console.log('received chunk');
+      });
+      request.on('error', reject);
+      request.on('end', () => {
+        body = Buffer.concat(body).toString();
+        console.log(`resolve getRequestBody [${body}]`);
+        resolve(body)
+      });
+    });
+  }
+
   constructor({ target, port, bind }) {
     this.target = target;
     this.port = port;
     this.bind = bind;
+    this.running = {};
   }
 
   async run() {
@@ -56,12 +74,8 @@ class BackupServer {
   //
   //  Instance Management
   //
-  //    GET /instance/list?set-name=XXXXX
-  //    GET /instance/list?set-name=XXXXX&ts=timestamp
-  //    GET /instance/get?set-name=XXXX                 // create new (running) instance
-  //    GET /instance/get?set-name=XXXX&ts=timestamp
-  //    POST /instance/add-entry
-  //    POST /instance/finished
+  //    GET /backup/create/{set-name}              // create new (running) instance
+  //
 
   async handleRequest(request, response) {
     try {
@@ -69,7 +83,8 @@ class BackupServer {
       const uri = url.parse(request.url, true);
       const parts = uri.pathname.split('/').slice(1);
       const target = this.target;
-      let setname, when, verbose;
+      const running = this.running;
+      let setname, when, verbose, backup;
       switch(parts.shift()) {
         case 'fs':
           switch(parts.shift()) {
@@ -79,6 +94,13 @@ class BackupServer {
               response.writeHead(has ? 200 : 404);
               response.end();
               return;
+            case 'put':
+              const hash = parts.shift();
+              const size = parts.shift();
+              await target.fs().put(request, size, hash);
+              response.writeHead(200, 'OK');
+              response.end();
+              break;
             case 'clean':
               await this.target.clean();
               response.writeHead(200);
@@ -104,6 +126,81 @@ class BackupServer {
           await this.target.list({ setname, when, filter, log: (s) => {
             response.write(s+'\n');
           }});
+          response.end();
+          break;
+        case 'backup':
+          switch(parts.shift()) {
+            case 'create':
+              setname = parts.shift();
+              backup = {
+                id: request.socket.address() + '/' + setname,
+                started: new Date(),
+              };
+              const other = running[setname];
+              if (other && other.id != backup.id) {
+                response.writeHead(403, 'backup is already running');
+                response.end();
+              }
+              backup.instance = new BackupInstance({ target, setname })
+              await backup.instance.createNewInstance();
+              running[setname] = backup;
+              response.writeHead(200, backup.id);
+              response.end();
+              break;
+            case 'log':
+              setname = parts.shift();
+              backup = running[setname];
+              if (!backup) {
+                response.writeHead(401, 'backup is not running');
+                response.end();
+              }
+              const body = await BackupServer.getRequestBody(request);
+              if (body) {
+                const entry = JSON.parse(body);
+                switch(parts.shift()) {
+                  case 'source':
+                    console.log(`source ${entry}`);
+                    await backup.instance.log().writeSourceEntry(entry);
+                    break;
+                  case 'entry':
+                    console.log(`source ${entry}`);
+                    await backup.instance.log().writeEntry(
+                      Object.assign(entry, {
+                        ctime: new Date(entry.ctime),
+                        mtime: new Date(entry.mtime),
+                      })
+                    );
+                    break;
+                }
+                response.writeHead(200, 'OK');
+                response.end();
+              }
+              response.writeHead(401, 'invalid request, no body');
+              response.end();
+              break;
+            case 'complete':
+              setname = parts.shift();
+              backup = running[setname];
+              if (!backup) {
+                response.writeHead(401, 'backup is not running');
+                response.end();
+              }
+              await backup.instance.complete(backup.started);
+              response.writeHead(200, 'backup completed');
+              response.end();
+              break;
+            case 'abandon':
+              setname = parts.shift();
+              backup = running[setname];
+              if (!backup) {
+                response.writeHead(401, 'backup is not running');
+                response.end();
+              }
+              running[setname] = null;
+              response.writeHead(200, 'backup abandoned');
+              response.end();
+              break;
+          }
           response.end();
           break;
       }

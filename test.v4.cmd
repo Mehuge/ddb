@@ -3,6 +3,7 @@ rem node ./ddb.js backup K:/BACKUPS/CUBE-DDBV4 --set-name DEV --from D:/DEV --su
 rem node ./ddb.js verify K:/BACKUPS/CUBE-DDBV4 --set-name DEV --verify-and-compare
 rem node ./ddb.js clean K:/BACKUPS/CUBE-DDBV4 --verbose
 
+call rimraf K:\BACKUPS\DDBV4
 
 rem backup this project, exclude node_modules .git but include .gitignore
 node ddb.js backup K:\BACKUPS\DDBV4 --set-name=ddb --fstype=hash-v4 --from . --exclude node_modules --exclude .git --include .gitignore --verbose
