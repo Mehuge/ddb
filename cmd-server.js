@@ -7,8 +7,8 @@ class BackupServer {
     const opts = (new BackupOptions()).parse(args);
 
     // Configure backup from options
-    const { destination, fast, verbose } = opts;
-    const target = new BackupTarget({ destination, fast, verbose });
+    const { destination, fast, verbose, fstype } = opts;
+    const target = new BackupTarget({ destination, fast, verbose, fstype });
     await target.connect(true);
 
     const port = opts.port || 4444;
