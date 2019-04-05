@@ -84,7 +84,7 @@ class BackupServer {
       const parts = uri.pathname.split('/').slice(1);
       const target = this.target;
       const running = this.running;
-      let setname, when, verbose, backup;
+      let setname, when, verbose, backup, body;
       switch(parts.shift()) {
         case 'fs':
           switch(parts.shift()) {
@@ -134,7 +134,6 @@ class BackupServer {
               setname = parts.shift();
               backup = {
                 id: request.socket.address() + '/' + setname,
-                started: new Date(),
               };
               const other = running[setname];
               if (other && other.id != backup.id) {
@@ -154,15 +153,16 @@ class BackupServer {
                 response.writeHead(401, 'backup is not running');
                 response.end();
               }
-              const body = await BackupServer.getRequestBody(request);
+              body = await BackupServer.getRequestBody(request);
               if (body) {
-                const entry = JSON.parse(body);
                 switch(parts.shift()) {
                   case 'source':
-                    console.log(`source ${entry}`);
-                    await backup.instance.log().writeSourceEntry(entry);
+                    const root = JSON.parse(body);
+                    console.log(`source ${root}`);
+                    await backup.instance.log().writeSourceEntry({ root });
                     break;
                   case 'entry':
+                    const entry = JSON.parse(body);
                     console.log(`source ${entry}`);
                     await backup.instance.log().writeEntry(
                       Object.assign(entry, {
@@ -180,12 +180,25 @@ class BackupServer {
               break;
             case 'complete':
               setname = parts.shift();
+              const when = parts.shift();
               backup = running[setname];
               if (!backup) {
                 response.writeHead(401, 'backup is not running');
                 response.end();
               }
-              await backup.instance.complete(backup.started);
+              await backup.instance.complete(when);
+              response.writeHead(200, 'backup completed');
+              response.end();
+              break;
+            case 'finish':
+              setname = parts.shift();
+              backup = running[setname];
+              if (!backup) {
+                response.writeHead(401, 'backup is not running');
+                response.end();
+              }
+              body = await BackupServer.getRequestBody(request);
+              await backup.instance.log().finish(body);
               response.writeHead(200, 'backup completed');
               response.end();
               break;
@@ -207,6 +220,7 @@ class BackupServer {
       response.writeHead(400);
       response.end();
     } catch(e) {
+      console.error(`503 ${e.toString()}`);
       response.writeHead(503, e.toString());
       response.end();
     }

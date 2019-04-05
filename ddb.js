@@ -40,4 +40,6 @@ async function run(args) {
   }
 }
 
-run(process.argv);
+(async () => {
+  await run(process.argv);
+})();
