@@ -7,8 +7,8 @@ class BackupServer {
     const opts = (new BackupOptions()).parse(args);
 
     // Configure backup from options
-    const { destination, fast, verbose, fstype } = opts;
-    const target = new BackupTarget({ destination, fast, verbose, fstype });
+    const { destination, verbose } = opts;
+    const target = new BackupTarget({ destination, fast: true, verbose, fstype: 'hash-v4' });
     await target.connect(true);
 
     const port = opts.port || 4444;
@@ -97,7 +97,7 @@ class BackupServer {
             case 'put':
               const hash = parts.shift();
               const size = parts.shift();
-              await target.fs().put(request, size, hash);
+              await target.fs().put(request, size, hash, { compressed: true });
               response.writeHead(200, 'OK');
               response.end();
               break;
