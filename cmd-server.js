@@ -107,8 +107,10 @@ class BackupServer {
           switch(parts.shift()) {
             case 'create':
               setname = parts.shift();
+              const { address, port } = request.socket.address();
               backup = {
-                id: request.socket.address() + '/' + setname,
+                client: `${address}:${port}`,
+                id: `${address}:${port}/${setname}`,
               };
               const other = running[setname];
               if (other && other.id != backup.id) {
@@ -118,6 +120,7 @@ class BackupServer {
               backup.instance = new BackupInstance({ target, setname })
               await backup.instance.createNewInstance();
               running[setname] = backup;
+              console.log(`${(new Date()).toISOString()}: New backup started for ${setname} by ${backup.client}`);
               response.writeHead(200, backup.id);
               response.end();
               break;
@@ -153,18 +156,6 @@ class BackupServer {
               response.writeHead(401, 'invalid request, no body');
               response.end();
               break;
-            case 'complete':
-              setname = parts.shift();
-              const when = parts.shift();
-              backup = running[setname];
-              if (!backup) {
-                response.writeHead(401, 'backup is not running');
-                response.end();
-              }
-              await backup.instance.complete(when);
-              response.writeHead(200, 'backup completed');
-              response.end();
-              break;
             case 'finish':
               setname = parts.shift();
               backup = running[setname];
@@ -174,6 +165,20 @@ class BackupServer {
               }
               body = await BackupServer.getRequestBody(request);
               await backup.instance.log().finish(body);
+              response.writeHead(200, 'backup completed');
+              response.end();
+              break;
+            case 'complete':
+              setname = parts.shift();
+              const when = parts.shift();
+              backup = running[setname];
+              if (!backup) {
+                response.writeHead(401, 'backup is not running');
+                response.end();
+              }
+              await backup.instance.complete(when);
+              delete running[setname];
+              console.log(`${(new Date()).toISOString()}: Backup complete for ${setname} by ${backup.client}`);
               response.writeHead(200, 'backup completed');
               response.end();
               break;
