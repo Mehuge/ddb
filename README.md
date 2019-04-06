@@ -95,7 +95,7 @@ The filesystem is implemented in the `BackupFileSystem` class. The filesystem ha
 - [x] networking: add ability to backup over the network - --server mode
 - [ ] networking: add restore support over network
 - [ ] networking: add run backup server over ssh (a one time backup server)
-- [ ] networking: add --https option for server mode, default to https if port ends in 443 (443, 4443, 44443)
+- [ ] networking: add --http and --https options for server mode, default to https if port ends in 443 (443, 4443, 44443)
 - [x] a better file system
 - [ ] encryption (backup-filesystem-v5)
 - [ ] authentication: backup server should be able to authenticate clients

@@ -1,5 +1,4 @@
 const { BackupInstance, BackupOptions, BackupTarget } = require('./lib');
-const http = require('http');
 const url = require('url');
 
 class BackupServer {
@@ -13,7 +12,8 @@ class BackupServer {
 
     const port = opts.port || 4444;
     const bind = opts.bind || '0.0.0.0';
-    const server = new BackupServer({ target, port, bind });
+    const https = opts.https || (port.toString().substr(-3) == '443');
+    const server = new BackupServer({ target, port, bind, https });
     await server.run();
   }
 
@@ -31,52 +31,30 @@ class BackupServer {
     });
   }
 
-  constructor({ target, port, bind }) {
+  constructor({ target, port, bind, https }) {
     this.target = target;
     this.port = port;
     this.bind = bind;
+    this.protocol = `http${https ? 's' : ''}`;
+    this.http = require(this.protocol);
     this.running = {};
   }
 
   async run() {
     return new Promise((resolve, reject) => {
-      const server = this.server = http.createServer(this.handleRequest.bind(this));
-      server.listen(this.port, /* this.host, */ (err) => {
+      const server = this.server = this.http.createServer(this.handleRequest.bind(this));
+      server.listen(this.port, this.bind, (err) => {
         if (err) return reject(err);
-        console.log(`TCP Server is running on port ${this.port}`);
+        console.log(`${this.protocol} server is running on port ${this.port}`);
       });
     });
   }
 
-  // Backup Service EndPoints
-  //
-  //  Hash File System
-  //   GET /fs/has/<hash>.variant.size
-  //      status 200 if exists, 401 if not
-  //
-  //   POST /fs/put/<hash>.variant.size
-  //      {chunked data}
-  //      status 200 if put succeeded, 50? if failed
-  //
-  //   GET /fs/get/<hash>.variant.size
-  //      {chunked data}
-  //      status 200 if exists, 401 if not
-  //
-  //   POST /fs/compare/<hash>.n.size
-  //      {hash-chain}
-  //      status 200 if same, ??? if not
-  //
-  //   GET /fs/clean
-  //      status 200
-  //
-  //  Instance Management
-  //
-  //    GET /backup/create/{set-name}              // create new (running) instance
-  //
+  // Backup Service
 
   async handleRequest(request, response) {
     try {
-      console.dir(`${request.method} ${request.url}`);
+      if (this.verbose) console.log(`${request.method} ${request.url}`);
       const uri = url.parse(request.url, true);
       const parts = uri.pathname.split('/').slice(1);
       const target = this.target;
@@ -155,12 +133,12 @@ class BackupServer {
                 switch(parts.shift()) {
                   case 'source':
                     const root = JSON.parse(body);
-                    console.log(`source ${body}`);
+                    if (this.verbose) console.log(`source ${body}`);
                     await backup.instance.log().writeSourceEntry({ root });
                     break;
                   case 'entry':
                     const entry = JSON.parse(body);
-                    console.log(`entry ${body}`);
+                    if (this.verbose) console.log(`entry ${body}`);
                     await backup.instance.log().writeEntry(
                       Object.assign(entry, {
                         ctime: new Date(entry.ctime),
