@@ -30,7 +30,7 @@ kind of space savings could be achieved. Enter ddb, de-duplicating backup.
 
 Hashing
 --
-I chose sha256 as the hashing algorithm but the issue with a hash is that there are potentially collisions, though highly unlikely it is a possibility, so I had to build in some integrity checks into the system. 
+I chose sha256 as the hashing algorithm but the issue with a hash is that there are potentially collisions, though highly unlikely it is a possibility, so I had to build in some integrity checks into the system.
 
 sha256 hashs are 64 hexadecimal characters long. These are stored in a folder called `files.db` within the backup destination. The files are stored in buckets implemented as two levels of directories [00-FF]/[00-FF]. Which bucket a hash is placed into is calculated by splitting the hexdecimal hash into two equal length strings, and calculating the crc8 hash of each, these become the folder names for the bucket.
 
@@ -74,11 +74,11 @@ The filesystem is implemented in the `BackupFileSystem` class. The filesystem ha
 
 *Note: v3 is the default filesystem, v4 must be specified when creating a destination using the `--fstype=hash-v4` option.
 
-`hash-v3` is the latest version and is similar to `hash-v1` but uses a very simple crc8 + crc8 bucket system which limits the `files.db` and child-folders to 256 entries max, with the hashed files stored as a leaf node. The folders containing the leaf nodes will grow but testing suggests the growth is fairly evenly spread across the buckets, so growth is slow. This means that the system could store 16 million files and only have around 256 hashed files per bucket. It also means that the file system will use at most 65,536 folders regardless of the numbers of files, solving the main problem with `hash-v1` whilst also being faster (less folders to manage). Because the bucket is chosen using a hash of the file hash, there is no need to maintain an index of the hashes, so does not suffer from the problems with `hash-v2` of being slow, and risks to integrity.
-
-`hash-v4` is `hash-v3` with compression. I suppose I could have called it `hash-v3-compressed`! As files are stored in the file system the a gzipped (zlib). As files are copied out of or hased they are decompressed using gunzip (zlib). This compression is handled inline using streams, so adds very little overhead in terms of performance.
+`hash-v3` is uses a simple crc8/crc8 bucket system which limits the `files.db` and child-folders to 256 entries max, with the hashed files stored as a leaf node. The folders containing the leaf nodes will grow but testing suggests the growth is fairly evenly spread across the buckets, so growth is slow. This means that the system could store 16 million files and only have around 256 hashed files per bucket. It also means that the file system will use at most 65,536 folders regardless of the numbers of files, solving the main problem with `hash-v1` whilst also being faster (less folders to manage). Because the bucket is chosen using a hash of the file hash, there is no need to maintain an index of the hashes, so does not suffer from the problems with `hash-v2` of being slow, and risks to integrity.
 
 ![Backup FileSystem V3](docs/backup-filesystem-v3.png)
+
+`hash-v4` is `hash-v3` with compression. I suppose I could have called it `hash-v3-compressed`! As files are stored in the file system gzipped (zlib). As files are copied out of or hashed they are decompressed using gunzip (zlib). This compression is handled inline using streams, so adds very little overhead in terms of performance.
 
 **Todo:**
 
@@ -92,7 +92,9 @@ The filesystem is implemented in the `BackupFileSystem` class. The filesystem ha
 - [x] add ability to select an increment to list / verify / support
 - [ ] add support for backup configs `node backup.js --config <path-to-config>`
 - [ ] add reporting options (email, status file ...)
-- [ ] networking (add ability to backup over the network - --server mode)
+- [x] networking: add ability to backup over the network - --server mode
+- [ ] networking: add restore support over network
+- [ ] networking: add run backup server over ssh (a one time backup server)
 - [x] a better file system
 - [ ] --move-set move a backup set from one backup destination to another.
 - [ ] --archive archive a backup destination
@@ -161,3 +163,18 @@ Restore the last (current) backup for backup set `ddb` and restore it to `D:\TEM
 node ddb.js restore K:/BACKUPS/DDB --set-name ddb --output=D:\TEMP\RESTORE --exclude ** --include lib --verbose
 ```
 Restore the `lib` sub-folder of the last (current) backup for backup set `ddb` and restore it to `D:\TEMP\RESTORE`.
+
+Run backup as a server
+--
+```
+node ddb.js server K:/BACKUPS/SERVER --verbose
+```
+
+Backup servers are hard coded to create a hash-v4 (compressed) file system, and automatically enable --fast mode.
+
+`hash-v4` is used because files are transfered to the server already gzipped to save network bandwidth so it make little sense to decompress them just to put them in a hash-v3 file system, instead they are copied right from the http stream into the file system as-is, so the server doesn't do any compression, the compression is all done by the client.
+
+Fast mode is used because comparing files accross the network would be too expensive, so backups rely on the hashes for comparisons. When considering a file to backup the client hashes the file, then asks the server if it has that hash, if it does, the client just says log this file as backed up. If not, it compresses the file and sends it to the server.  Only changed files are ever transmitted over the network.
+
+Future: An optimisation here may be to do some kind of rdiff of the file, once we know we need to send the file, if the server can find a previous version of the file from the previous backup set log, it could produce a hash chain for that version (hashes for each block) and send the hash chain to the client, the client could then work out which parts of the file it needs to send to the server so it can construct the new version of the file from the previous version. This would be great for backing up log files, as only the new parts of the log files would be sent.
+
