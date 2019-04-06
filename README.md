@@ -95,13 +95,33 @@ The filesystem is implemented in the `BackupFileSystem` class. The filesystem ha
 - [x] networking: add ability to backup over the network - --server mode
 - [ ] networking: add restore support over network
 - [ ] networking: add run backup server over ssh (a one time backup server)
+- [ ] networking: add --https option for server mode, default to https if port ends in 443 (443, 4443, 44443)
 - [x] a better file system
+- [ ] encryption (backup-filesystem-v5)
+- [ ] authentication: backup server should be able to authenticate clients
 - [ ] --move-set move a backup set from one backup destination to another.
 - [ ] --archive archive a backup destination
 - [ ] --(un)compress (convert hash-v3 to hash-v4 and visa versa)
 - [ ] `ddb cp` command, copy files matching wildcard from a backup instance
 - [ ] `ddb cat` like cp but to standard output.
 - [ ] `ddb search` search for a file matching pattern
+
+TODO: Authentication
+--
+Only makes sense for the backup client/server mode. Allow a passwd file to be created in the
+backup destination that allows backup client keys to be defined, optionally tied to an IP.  Only clients that can authenticate with a key can use the backup server.
+
+TODO: Encryption
+--
+Implement this as hash-v5 which is compressed+encrypted. This would work by providing a key at runtime (via environment, option or prompt) that hash-v5 will use to encrypt/decrypt the files.
+
+The last stage will be encryption, that is the files will be compressed before encrypted and decrypted before decompressed. This is because in client-server mode the client does the compression, so files being stored in the file system are already compressed.
+
+*Local backup:*<br>
+disk -> compress -> encrypted -> disk
+
+*Remote backup:*<br>
+disk -> compress -> network (https) -> encrypt -> disk
 
 Limitations
 ==
