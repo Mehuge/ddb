@@ -108,7 +108,7 @@ class BackupServer {
         case 'verify':
           setname = parts.shift();
           when = parts.shift() || 'current';
-          verbose = "verbose" in uri.query;
+          verbose = uri.query.verbose == true;
           response.writeHead(200, { 'Content-Type': 'text/plain' });
           await this.target.verify({ setname, when, verbose, log: (s) => {
             response.write(s+'\n');
