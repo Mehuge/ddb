@@ -1,33 +1,29 @@
-const { BackupFileSystem, BackupDest, BackupSource, BackupSet, BackupJob, BackupOptions, BackupInstance } = require('./lib/backup');
+const { BackupTarget, BackupSource, BackupSet, BackupOptions } = require('./lib');
 
 class Backup {
   static async exec(args) {
 
     // Parse backup options
     const opts = (new BackupOptions({
-      set: 'default',
+      setname: 'default',
       sources: [],
       backup: true,
     })).parse(args);
 
     // Configure backup from options
-    const destination = new BackupDest({
-      destination: opts.destination,
-      filesystem: new BackupFileSystem({ fast: opts.fast }),
-      fstype: opts.fstype,
-      verbose: opts.verbose,
-    });
-    await destination.init(opts.backup);
+    const { setname, sources, backup, verify, compare, fast, fstype, verbose, destination } = opts;
+    const target = new BackupTarget({ destination, fast, fstype, verbose });
+    await target.connect(opts.backup);
 
     // Clean backup destination
     if (opts.clean) {
-      await destination.clean();
+      await target.clean();
     }
 
     // Setup backup set
     const backupset = new BackupSet({
-      name: opts.set,
-      sources: opts.backup && opts.sources.map
+      setname,
+      sources: backup && sources.map
         (source => new BackupSource({
           src: source.src,
           filters: source.filters,
@@ -36,23 +32,19 @@ class Backup {
         }))
     });
 
-    // Create backup job
-    const job = new BackupJob({ destination, backupset });
-
     // Run the backup job
-    if (opts.backup) await job.backup();
+    if (backup) await target.backup({ backupset, ...opts });
 
     // If asked to verify, verify
-    if (opts.verify) {
-      await job.verify({
-        compare: opts.compare,
-        verbose: opts.verbose,
+    if (verify) {
+      await target.verify({
+        compare, verbose, setname,
         when: opts.backup ? 'running' : (opts.when || 'current')
       });
     }
 
     // Finally, if backing up, complete the job (bake it)
-    if (opts.backup) await job.complete();
+    if (opts.backup) await target.complete({ backupset, ...opts });
   }
 };
 
