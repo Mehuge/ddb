@@ -18,17 +18,14 @@ class BackupServer {
   }
 
   static getRequestBody(request) {
-    console.log('getRequestBody');
     return new Promise((resolve, reject) => {
       let body = [];
       request.on('data', chunk => {
         body.push(chunk);
-        console.log('received chunk');
       });
       request.on('error', reject);
       request.on('end', () => {
         body = Buffer.concat(body).toString();
-        console.log(`resolve getRequestBody [${body}]`);
         resolve(body)
       });
     });
@@ -158,12 +155,12 @@ class BackupServer {
                 switch(parts.shift()) {
                   case 'source':
                     const root = JSON.parse(body);
-                    console.log(`source ${root}`);
+                    console.log(`source ${body}`);
                     await backup.instance.log().writeSourceEntry({ root });
                     break;
                   case 'entry':
                     const entry = JSON.parse(body);
-                    console.log(`source ${entry}`);
+                    console.log(`entry ${body}`);
                     await backup.instance.log().writeEntry(
                       Object.assign(entry, {
                         ctime: new Date(entry.ctime),
