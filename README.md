@@ -93,9 +93,10 @@ The filesystem is implemented in the `BackupFileSystem` class. The filesystem ha
 - [ ] add support for backup configs `node backup.js --config <path-to-config>`
 - [ ] add reporting options (email, status file ...)
 - [x] networking: add ability to backup over the network - --server mode
-- [ ] networking: add restore support over network
+- [x] networking: add restore support over network
 - [ ] networking: add run backup server over ssh (a one time backup server)
 - [ ] networking: add --http and --https options for server mode, default to https if port ends in 443 (443, 4443, 44443)
+- [ ] networking: skip restoring files if local copy hash is the same as the servers hash.
 - [x] a better file system
 - [ ] encryption (backup-filesystem-v5)
 - [ ] authentication: backup server should be able to authenticate clients
@@ -183,6 +184,11 @@ Restore the last (current) backup for backup set `ddb` and restore it to `D:\TEM
 node ddb.js restore K:/BACKUPS/DDB --set-name ddb --output=D:\TEMP\RESTORE --exclude ** --include lib --verbose
 ```
 Restore the `lib` sub-folder of the last (current) backup for backup set `ddb` and restore it to `D:\TEMP\RESTORE`.
+
+```
+node ddb.js restore http://backupserver:4444/ --set-name ddb --output=D:\TEMP\RESTORE --exclude ** --include lib --verbose
+```
+Restore the `lib` sub-folder of the last (current) backup for backup set `ddb` from a backup server running on backupserver listening on port 4444 and restore it to `D:\TEMP\RESTORE`.
 
 Run backup as a server
 --
