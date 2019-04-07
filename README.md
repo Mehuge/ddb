@@ -3,6 +3,24 @@ De-Duplicating Backup
 ==
 Experimental (proof-of-concept) hash based backup system.
 
+Install
+==
+`ddb` requires `node` v10 or later to be already installed.
+
+Installing using the install script
+--
+(requires `git` and either `curl` or `wget`)
+
+At command prompt, cd to the folder where you want to install ddb. For example, `~/bin` or `/usr/local/bin` etc. Then run:
+
+```
+curl https://github.com/Mehuge/ddb/raw/master/install.sh | bash
+```
+or if you prefer to use `wget`
+```
+wget -qO - https://github.com/Mehuge/ddb/raw/master/install.sh | bash
+```
+
 Motivation
 ===
 
