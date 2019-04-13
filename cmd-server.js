@@ -227,7 +227,7 @@ class BackupServer {
               console.log(`Restore started for ${setname}.${when} filter ${filter.filters.join(' ')} by ${address.address}:${address.port}`);
               const instance = new BackupInstance({ target, setname });
               response.writeHead(200, { 'Content-Type': 'text/json' });
-              await instance.restore({ filter }, (entry) => {
+              await instance.restore({ when, filter }, (entry) => {
                 let output;
                 switch(entry.type) {
                   case 'SOURCE':
