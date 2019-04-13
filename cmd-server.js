@@ -102,7 +102,7 @@ class BackupServer {
             case 'get':
               key = parts.shift().split('.');
               response.writeHead(200, 'OK');
-              await target.fs().restore(key[2], key[0], key[1], response);
+              await target.fs().restore(key[2], key[0], key[1], response, true);
               response.end();
               return;
           }

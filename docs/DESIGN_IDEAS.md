@@ -12,7 +12,7 @@ The current process boils down to this:
 
 ```
 C: GET /fs/has/<hash>
-S: 401 Not Found 
+S: 401 Not Found
 C: POST /fs/put/<hash>
 <contents of file>
 S: 200 OK
@@ -24,17 +24,41 @@ What we could do is add an extra step between the has and put ops.
 C: GET /fs/has/<hash>
 S: 401 Not Found
 C: POST /list/current { source, filename }
-S: 200 OK { hash, size }
+S: 200 OK { signature, size }
 ```
 
-The client at this point knows it needs to backup the file but that there is a previous version of the file on the server, that up to size bytes had the returned hash. So the client hashes that portion of the file to be backed up. If it's different, the client just sends the whole file. If they are the same though that means the file has simply been appended to, so the client can send a partial file.
+The client at this point knows it needs to backup the file but that there is a previous version of the file on the server, that has the rdiff signature. So the client performs an rdiff between the new file, using the signature and sends a diff to the server.  The diff will use the following format:
 
 ```
-C: POST /fs/partial { oldhash, newhash, newsize, tail }
+C: POST /fs/put-rdiff/<hash>
+F hash
+C offset length
+D length
+<stream-data-length-bytes>
+C offset length
+... repeat as necessary ...
+EOF
 S: 200 OK
 ```
 
-The server can then effectively `gunzip < oldhash | cat - tail | gzip > newhash` to create then new hash version without the client having to send all the data over the network.
+The server will then use the orignal file based on F hash, and the rdiff instructions + data to reconstruct the new file from the old one. The rdiff algorithm will be performed on the client, in its simplest form it will simply do a block by block comparison.
+
+```
+get signature for new file
+block = 0
+send old-hash
+while block < new file block count
+  if old signature block 0 = new signature block 0
+    send C block * blockSize, blockSize
+  else
+    send D blockSize
+    send data from source offset block*blockSize, blockSize
+  fi
+end while
+send EOF
+```
+
+It should group adjacent copyies into a single copy instruction.
 
 Perhaps in the future (`fstype: hash-v6`?)
 ==
