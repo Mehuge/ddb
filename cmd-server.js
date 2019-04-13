@@ -241,12 +241,39 @@ class BackupServer {
               this.writeHead(response, 401, 'invalid request, no body');
               response.end();
               return;
+            case 'rdiff':
+              setname = parts.shift();
+              op = running[setname];
+              if (!op) {
+                response.writeHead(401, 'backup is not running');
+                response.end();
+                return;
+              }
+              if (!op.current) {
+                op.current = [];
+                op.current = await op.instance.getLogEntries();
+              }
+              body = JSON.parse(await BackupServer.getRequestBody(request));
+              for (const entry of op.current) {
+                if (entry.type == 'F' && path.join(entry.root, entry.path) == body) {
+                  // file exists in current backup, get rdiff signature
+                  const signature = await op.instance.getSignature(entry);
+                  response.writeHead(200, { 'Content-Type': 'text/json' });
+                  response.write(JSON.stringify(signature));
+                  response.end();
+                  return;
+                }
+              }
+              response.writeHead(401, 'not found');
+              response.end();
+              return;
             case 'finish':
               setname = parts.shift();
               op = running[setname];
               if (!op || !op.instance || op.token != token) {
                 this.writeHead(response, 401, 'backup is not running');
                 response.end();
+                return;
               }
               body = await BackupServer.getRequestBody(request);
               await op.instance.log().finish(body);
