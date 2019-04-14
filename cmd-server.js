@@ -250,18 +250,29 @@ class BackupServer {
                 return;
               }
               if (!op.current) {
-                op.current = [];
-                op.current = await op.instance.getLogEntries();
+                try {
+                  op.current = await op.instance.getLogEntries();
+                } catch(e) {
+                  op.current = [];
+                }
               }
-              body = JSON.parse(await BackupServer.getRequestBody(request));
-              for (const entry of op.current) {
-                if (entry.type == 'F' && path.join(entry.root, entry.path) == body) {
-                  // file exists in current backup, get rdiff signature
-                  const signature = await op.instance.getSignature(entry);
-                  response.writeHead(200, { 'Content-Type': 'text/json' });
-                  response.write(JSON.stringify(signature));
-                  response.end();
-                  return;
+              if (op.current.length) {
+                body = JSON.parse(await BackupServer.getRequestBody(request));
+                for (const entry of op.current) {
+                  if (entry.type == 'F' && path.join(entry.root, entry.path) == body) {
+                    let signature;
+                    try {
+                      signature = await op.instance.getSignature(entry);
+                      response.writeHead(200, { 'Content-Type': 'text/json' });
+                      response.write(JSON.stringify(signature));
+                      response.end();
+                    } catch(e) {
+                      console.log('file does not exist, backup is corrupt');
+                      response.writeHead(500, 'current backup missing or corrupt');
+                      response.end();
+                    }
+                    return;
+                  }
                 }
               }
               response.writeHead(401, 'not found');
