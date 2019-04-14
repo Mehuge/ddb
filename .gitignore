@@ -1,3 +1,6 @@
 node_modules
 test.cmd
 test.*.cmd
+auth.json
+
+\.vscode/launch\.json
