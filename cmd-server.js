@@ -52,18 +52,16 @@ class BackupServer {
   }
 
   registerOp({ type, request, setname }) {
+    const address = request.socket.remoteAddress;
+    const port = request.socket.remotePort;
+    const id = `${address}:${port}/${setname}`;
     const running = this.running;
     const other = running[setname];
     if (other && other.id != backup.id) {
       // other backup/restore running for this client
       return { error: 403, type: other.type };
     }
-    const { address, port } = request.socket.address();
-    return running[setname] = {
-      type,
-      client: `${address}:${port}`,
-      id: `${address}:${port}/${setname}`,
-    };
+    return running[setname] = { type, client: `${address}:${port}`, id };
   }
 
   // Backup Service
