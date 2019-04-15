@@ -7,12 +7,21 @@ class Restore {
 		const opts = (new BackupOptions({ setname: 'default', sources: [] })).parse(args);
 
 		// Configure backup from options
-    const { destination, verbose, setname, when, filter, output, force } = opts;
-		const target = new BackupTarget({ destination, verbose });
+    const { destination, verbose, setname, when, filter, output, force, accessKey } = opts;
+		const target = new BackupTarget({ destination, verbose, accessKey });
 		await target.connect();
 
+    // login
+    accessKey && await target.login();
+
 		// Start the restore
-		target.restore({ setname, when, filter, output, force, verbose });
+		await target.restore({ setname, when, filter, output, force, verbose });
+
+    // logout
+    accessKey && await target.logout();
+
+    // cleanup
+    target.destroy();
 	}
 };
 

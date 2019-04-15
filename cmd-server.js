@@ -1,5 +1,6 @@
 const { BackupInstance, BackupOptions, BackupTarget, BackupLog } = require('./lib');
 const url = require('url');
+const server = require('./lib/server');
 
 class BackupServer {
   static async exec(args) {
@@ -51,17 +52,17 @@ class BackupServer {
     });
   }
 
-  registerOp({ type, request, setname }) {
+  registerOp({ type, request, setname, token }) {
     const address = request.socket.remoteAddress;
     const port = request.socket.remotePort;
     const id = `${address}:${port}/${setname}`;
     const running = this.running;
     const other = running[setname];
-    if (other && other.id != backup.id) {
+    if (other && other.id != id) {
       // other backup/restore running for this client
       return { error: 403, type: other.type };
     }
-    return running[setname] = { type, client: `${address}:${port}`, id };
+    return running[setname] = { type, client: `${address}:${port}`, id, token };
   }
 
   // Backup Service
@@ -69,14 +70,35 @@ class BackupServer {
   // TODO: break down
 
   async handleRequest(request, response) {
+    server.auth.expire(900);               // expire logins after 15 mins inactivity
     try {
       if (this.verbose) console.log(`${request.method} ${request.url}`);
       const uri = url.parse(request.url, true);
       const parts = uri.pathname.split('/').slice(1);
       const target = this.target;
       const running = this.running;
-      let setname, when, verbose, op, body, hash, size, key;
-      switch(parts.shift()) {
+      let setname, when, verbose, op, body, hash, size, key, verb;
+      switch(verb = parts.shift()) {
+        case 'dump':    // temp while in dev
+          console.log('logins');
+          console.dir(server.auth.tokens);
+          console.log('backups');
+          console.dir(running);
+          response.writeHead(200);
+          response.end();
+          return;
+        case 'auth':
+          await server.auth.process({ parts, request, response });
+          return;
+      }
+      const authorization = (request.headers['authorization'] || '').split(' ');
+      const address = request.socket.remoteAddress;
+      if (authorization.length != 2 || !authorization[0] == 'token' || !await server.auth.authenticate({ address, token: authorization[1] })) {
+        response.writeHead(403, 'not allowed');
+        response.end();
+        return;
+      }
+      switch(verb) {
         case 'fs':
           switch(parts.shift()) {
             case 'has':
@@ -129,7 +151,7 @@ class BackupServer {
           switch(parts.shift()) {
             case 'create':
               setname = parts.shift();
-              op = this.registerOp({ type: 'backup', request, setname });
+              op = this.registerOp({ type: 'backup', request, setname, token: authorization[1] });
               if (op.error) {
                 response.writeHead(op.error, '${op.type} is already running');
                 response.end();
@@ -151,7 +173,7 @@ class BackupServer {
             case 'log':
               setname = parts.shift();
               op = running[setname];
-              if (!op || !op.instance) {
+              if (!op || !op.instance || op.token != authorization[1]) {
                 response.writeHead(401, 'backup is not running');
                 response.end();
                 return;
@@ -185,7 +207,7 @@ class BackupServer {
             case 'finish':
               setname = parts.shift();
               op = running[setname];
-              if (!op || !op.instance) {
+              if (!op || !op.instance || op.token != authorization[1]) {
                 response.writeHead(401, 'backup is not running');
                 response.end();
               }
@@ -198,7 +220,7 @@ class BackupServer {
               setname = parts.shift();
               const when = parts.shift();
               op = running[setname];
-              if (!op || !op.instance) {
+              if (!op || !op.instance || op.token != authorization[1]) {
                 response.writeHead(401, 'backup is not running');
                 response.end();
               }
@@ -211,7 +233,7 @@ class BackupServer {
             case 'abandon':
               setname = parts.shift();
               op = running[setname];
-              if (!op || !op.instance) {
+              if (!op || !op.instance || op.token != authorization[1]) {
                 response.writeHead(401, 'backup is not running');
                 response.end();
               }
