@@ -7,13 +7,21 @@ class Clean {
     const opts = (new BackupOptions()).parse(args);
 
     // Configure backup from options
-    const { destination, verbose } = opts;
-    const target = new BackupTarget({ destination, verbose });
+    const { destination, verbose, accessKey } = opts;
+    const target = new BackupTarget({ destination, verbose, accessKey });
     await target.connect();
+
+    // login
+    accessKey && await target.login();
 
     // Clean backup destination
     await target.clean(opts);
 
+    // logout
+    accessKey && await target.logout();
+
+    // cleanup
+    target.destroy();
   }
 };
 

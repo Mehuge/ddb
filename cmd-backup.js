@@ -11,9 +11,12 @@ class Backup {
     })).parse(args);
 
     // Configure backup from options
-    const { setname, sources, backup, verify, compare, fast, fstype, verbose, destination } = opts;
-    const target = new BackupTarget({ destination, fast, fstype, verbose });
+    const { setname, sources, backup, verify, compare, fast, fstype, verbose, destination, accessKey } = opts;
+    const target = new BackupTarget({ destination, fast, fstype, verbose, accessKey });
     await target.connect(opts.backup);
+
+    // login
+    accessKey && await target.login();
 
     // Clean backup destination
     if (opts.clean) {
@@ -45,6 +48,12 @@ class Backup {
 
     // Finally, if backing up, complete the job (bake it)
     if (opts.backup) await target.complete({ backupset, ...opts });
+
+    // logout
+    accessKey && await target.logout();
+
+    // cleanup
+    target.destroy();
   }
 };
 
