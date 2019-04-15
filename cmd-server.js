@@ -135,16 +135,23 @@ class BackupServer {
                 response.end();
                 return;
               }
-              op.instance = new BackupInstance({ target, setname });
-              await op.instance.createNewInstance();
-              console.log(`${(new Date()).toISOString()}: New backup started for ${setname} by ${op.client}`);
-              response.writeHead(200, op.id);
-              response.end();
+              try {
+                op.instance = new BackupInstance({ target, setname });
+                await op.instance.createNewInstance();
+                console.log(`${(new Date()).toISOString()}: New backup started for ${setname} by ${op.client}`);
+                response.writeHead(200, op.id);
+                response.end();
+              } catch(e) {
+                console.log(`${(new Date()).toISOString()}: Failed to started for ${setname} by ${op.client}`);
+                console.dir(e);
+                delete running[setname];
+                throw e;
+              }
               return;
             case 'log':
               setname = parts.shift();
               op = running[setname];
-              if (!op) {
+              if (!op || !op.instance) {
                 response.writeHead(401, 'backup is not running');
                 response.end();
                 return;
@@ -178,7 +185,7 @@ class BackupServer {
             case 'finish':
               setname = parts.shift();
               op = running[setname];
-              if (!op) {
+              if (!op || !op.instance) {
                 response.writeHead(401, 'backup is not running');
                 response.end();
               }
@@ -191,7 +198,7 @@ class BackupServer {
               setname = parts.shift();
               const when = parts.shift();
               op = running[setname];
-              if (!op) {
+              if (!op || !op.instance) {
                 response.writeHead(401, 'backup is not running');
                 response.end();
               }
@@ -204,7 +211,7 @@ class BackupServer {
             case 'abandon':
               setname = parts.shift();
               op = running[setname];
-              if (!op) {
+              if (!op || !op.instance) {
                 response.writeHead(401, 'backup is not running');
                 response.end();
               }
