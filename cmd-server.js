@@ -69,6 +69,15 @@ class BackupServer {
 
   // TODO: break down
 
+  writeHead(response, code, message, headers) {
+    if (typeof message == "object") {
+      headers = message;
+      message = undefined;
+    }
+    if (this.verbose) console.log(`${code}${message?' '+message:''}${headers?' '+JSON.stringify(headers):''}`);
+    response.writeHead(code, message, headers);
+  }
+
   async handleRequest(request, response) {
     server.auth.expire(900);               // expire logins after 15 mins inactivity
     try {
@@ -84,7 +93,7 @@ class BackupServer {
           console.dir(server.auth.tokens);
           console.log('backups');
           console.dir(running);
-          response.writeHead(200);
+          this.writeHead(response, 200);
           response.end();
           return;
         case 'auth':
@@ -94,7 +103,7 @@ class BackupServer {
       const authorization = (request.headers['authorization'] || '').split(' ');
       const address = request.socket.remoteAddress;
       if (authorization.length != 2 || !authorization[0] == 'token' || !await server.auth.authenticate({ address, token: authorization[1] })) {
-        response.writeHead(403, 'not allowed');
+        this.writeHead(response, 403, 'not allowed');
         response.end();
         return;
       }
@@ -104,24 +113,24 @@ class BackupServer {
             case 'has':
               key = parts.shift().split('.');
               const has = await target.fs().has(key[2], key[0], key[1]);
-              response.writeHead(has ? 200 : 404);
+              this.writeHead(response, has ? 200 : 404);
               response.end();
               return;
             case 'put':
               hash = parts.shift();
               size = parts.shift();
               await target.fs().put(request, size, hash, { compressed: true });
-              response.writeHead(200, 'OK');
+              this.writeHead(response, 200, 'OK');
               response.end();
               return;
             case 'clean':
               await this.target.clean();
-              response.writeHead(200);
+              this.writeHead(response, 200, 'OK');
               response.end();
               return;
             case 'get':
               key = parts.shift().split('.');
-              response.writeHead(200, 'OK');
+              this.writeHead(response, 200, 'OK');
               await target.fs().restore(key[2], key[0], key[1], response, true);
               response.end();
               return;
@@ -131,7 +140,7 @@ class BackupServer {
           setname = parts.shift();
           when = parts.shift() || 'current';
           verbose = uri.query.verbose == true;
-          response.writeHead(200, { 'Content-Type': 'text/plain' });
+          this.writeHead(response, 200, 'OK', { 'Content-Type': 'text/plain' });
           await this.target.verify({ setname, when, verbose, log: (s) => {
             response.write(s+'\n');
           }});
@@ -141,7 +150,7 @@ class BackupServer {
           setname = parts.shift();
           when = parts.shift();
           const filter = {};
-          response.writeHead(200, { 'Content-Type': 'text/plain' });
+          this.writeHead(response, 200, 'OK', { 'Content-Type': 'text/plain' });
           await this.target.list({ setname, when, filter, log: (s) => {
             response.write(s+'\n');
           }});
@@ -153,7 +162,7 @@ class BackupServer {
               setname = parts.shift();
               op = this.registerOp({ type: 'backup', request, setname, token: authorization[1] });
               if (op.error) {
-                response.writeHead(op.error, `${op.type} is already running for ${op.id}`);
+                this.writeHead(response, op.error, `${op.type} is already running for ${op.id}`);
                 response.end();
                 return;
               }
@@ -161,7 +170,7 @@ class BackupServer {
                 op.instance = new BackupInstance({ target, setname });
                 await op.instance.createNewInstance();
                 console.log(`${(new Date()).toISOString()}: New backup started for ${setname} by ${op.client}`);
-                response.writeHead(200, op.id);
+                this.writeHead(response, 200, op.id);
                 response.end();
               } catch(e) {
                 console.log(`${(new Date()).toISOString()}: Failed to started for ${setname} by ${op.client}`);
@@ -174,7 +183,7 @@ class BackupServer {
               setname = parts.shift();
               op = running[setname];
               if (!op || !op.instance || op.token != authorization[1]) {
-                response.writeHead(401, 'backup is not running');
+                this.writeHead(response, 401, 'backup is not running');
                 response.end();
                 return;
               }
@@ -197,23 +206,23 @@ class BackupServer {
                     );
                     break;
                 }
-                response.writeHead(200, 'OK');
+                this.writeHead(response, 200, 'OK');
                 response.end();
                 return;
               }
-              response.writeHead(401, 'invalid request, no body');
+              this.writeHead(response, 401, 'invalid request, no body');
               response.end();
               return;
             case 'finish':
               setname = parts.shift();
               op = running[setname];
               if (!op || !op.instance || op.token != authorization[1]) {
-                response.writeHead(401, 'backup is not running');
+                this.writeHead(response, 401, 'backup is not running');
                 response.end();
               }
               body = await BackupServer.getRequestBody(request);
               await op.instance.log().finish(body);
-              response.writeHead(200, 'backup completed');
+              this.writeHead(response, 200, 'backup completed');
               response.end();
               return;
             case 'complete':
@@ -221,24 +230,24 @@ class BackupServer {
               const when = parts.shift();
               op = running[setname];
               if (!op || !op.instance || op.token != authorization[1]) {
-                response.writeHead(401, 'backup is not running');
+                this.writeHead(response, 401, 'backup is not running');
                 response.end();
               }
               await op.instance.complete(when);
               delete running[setname];
               console.log(`${(new Date()).toISOString()}: Backup complete for ${setname} by ${op.client}`);
-              response.writeHead(200, 'backup completed');
+              this.writeHead(response, 200, 'backup completed');
               response.end();
               return;
             case 'abandon':
               setname = parts.shift();
               op = running[setname];
               if (!op || !op.instance || op.token != authorization[1]) {
-                response.writeHead(401, 'backup is not running');
+                this.writeHead(response, 401, 'backup is not running');
                 response.end();
               }
               running[setname] = null;
-              response.writeHead(200, 'backup abandoned');
+              this.writeHead(response, 200, 'backup abandoned');
               response.end();
               return;
           }
@@ -253,7 +262,7 @@ class BackupServer {
               const address = request.socket.address();
               console.log(`Restore started for ${setname}.${when} filter ${filter.filters.join(' ')} by ${address.address}:${address.port}`);
               const instance = new BackupInstance({ target, setname });
-              response.writeHead(200, { 'Content-Type': 'text/json' });
+              this.writeHead(response, 200, 'OK', { 'Content-Type': 'text/json' });
               await instance.restore({ when, filter }, (entry) => {
                 let output;
                 switch(entry.type) {
@@ -272,7 +281,7 @@ class BackupServer {
           }
           break;
       }
-      response.writeHead(400); // Bad Request
+      this.writeHead(response, 400); // Bad Request
       response.end();
     } catch(e) {
       console.error(`503 ${e.toString()}`);
