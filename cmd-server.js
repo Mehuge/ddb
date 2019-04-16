@@ -55,12 +55,12 @@ class BackupServer {
   registerOp({ type, request, setname, token }) {
     const address = request.socket.remoteAddress;
     const port = request.socket.remotePort;
-    const id = `${address}:${port}/${setname}`;
+    const id = `${address}/${setname}`;
     const running = this.running;
     const other = running[setname];
     if (other && other.id != id) {
-      // other backup/restore running for this client
-      return { error: 403, type: other.type };
+      // other backup/restore running
+      return { error: 403, type: other.type, id };
     }
     return running[setname] = { type, client: `${address}:${port}`, id, token };
   }
@@ -153,7 +153,7 @@ class BackupServer {
               setname = parts.shift();
               op = this.registerOp({ type: 'backup', request, setname, token: authorization[1] });
               if (op.error) {
-                response.writeHead(op.error, '${op.type} is already running');
+                response.writeHead(op.error, `${op.type} is already running for ${op.id}`);
                 response.end();
                 return;
               }
