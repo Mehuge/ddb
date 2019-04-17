@@ -140,11 +140,15 @@ class BackupServer {
           setname = parts.shift();
           when = parts.shift() || 'current';
           verbose = uri.query.verbose == true;
+          response.setHeader('Content-Type', 'text/plain; charset=utf-8');
+          response.setHeader('Transfer-Encoding', 'chunked');
           this.writeHead(response, 200, 'OK', { 'Content-Type': 'text/plain' });
           await this.target.verify({ setname, when, verbose, log: (s) => {
             response.write(s+'\n');
+            if (this.verbose) console.log(s);
           }});
           response.end();
+          if (this.verbose) console.log('Verify complete');
           return;
         case 'list':
           setname = parts.shift();
