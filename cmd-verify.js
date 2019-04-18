@@ -6,7 +6,7 @@ class Verify {
     // Parse backup options
     const opts = (new BackupOptions()).parse(args);
 
-    const { destination, verbose, setname, compare, when, accessKey } = opts;
+    const { destination, verbose, setname, compare, when, accessKey, compareWith } = opts;
 
     // Configure backup from options
     const target = new BackupTarget({ destination, verbose, accessKey });
@@ -16,7 +16,7 @@ class Verify {
     accessKey && await target.login();
 
     // Verify the backup
-    await target.verify({ setname, compare, verbose, when: when || 'current' });
+    await target.verify({ setname, compare, verbose, when: when || 'current', compareWith });
 
     // logout
     accessKey && await target.logout();
