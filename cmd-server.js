@@ -1,5 +1,6 @@
 const { BackupInstance, BackupOptions, BackupTarget, BackupLog } = require('./lib');
 const url = require('url');
+const path = require('path');
 const server = require('./lib/server');
 
 class BackupServer {
@@ -44,10 +45,11 @@ class BackupServer {
 
   async run() {
     return new Promise((resolve, reject) => {
-      const server = this.server = this.http.createServer(this.handleRequest.bind(this));
-      server.listen(this.port, this.bind, (err) => {
+      const http = this.http = this.http.createServer(this.handleRequest.bind(this));
+      http.listen(this.port, this.bind, async (err) => {
         if (err) return reject(err);
         console.log(`${this.protocol} server is running on port ${this.port}`);
+        await server.auth.setDb({ fn: path.join(this.target.getPath(), 'auth.json') });
       });
     });
   }
@@ -86,7 +88,7 @@ class BackupServer {
       const parts = uri.pathname.split('/').slice(1);
       const target = this.target;
       const running = this.running;
-      let setname, when, verbose, op, body, hash, size, key, verb;
+      let setname, when, verbose, op, body, hash, size, key, verb, auth;
       switch(verb = parts.shift()) {
         case 'dump':    // temp while in dev
           console.log('logins');
@@ -97,16 +99,24 @@ class BackupServer {
           response.end();
           return;
         case 'auth':
-          await server.auth.process({ parts, request, response });
+          await server.auth.process({ parts, request, response, key: await BackupServer.getRequestBody(request) });
           return;
       }
+
+      // Make sure this is an authenticated request.
       const authorization = (request.headers['authorization'] || '').split(' ');
-      const address = request.socket.remoteAddress;
-      if (authorization.length != 2 || !authorization[0] == 'token' || !await server.auth.authenticate({ address, token: authorization[1] })) {
+      if (authorization.length == 2 && authorization[0] == 'token') {
+        const address = request.socket.remoteAddress;
+        auth = await server.auth.authenticate({ address, token: authorization[1] });
+      } else {
+        auth = null;
+      }
+      if (!auth) {
         this.writeHead(response, 403, 'not allowed');
         response.end();
         return;
       }
+
       switch(verb) {
         case 'fs':
           switch(parts.shift()) {
@@ -143,7 +153,7 @@ class BackupServer {
           response.setHeader('Content-Type', 'text/plain; charset=utf-8');
           response.setHeader('Transfer-Encoding', 'chunked');
           this.writeHead(response, 200, 'OK', { 'Content-Type': 'text/plain' });
-          await this.target.verify({ setname, when, verbose, log: (s) => {
+          await this.target.verify({ setname, when, userid: auth.login.userid, verbose, log: (s) => {
             response.write(s+'\n');
             if (this.verbose) console.log(s);
           }});
@@ -155,7 +165,7 @@ class BackupServer {
           when = parts.shift();
           const filter = {};
           this.writeHead(response, 200, 'OK', { 'Content-Type': 'text/plain' });
-          await this.target.list({ setname, when, filter, log: (s) => {
+          await this.target.list({ setname, when, userid: auth.login.userid, filter, log: (s) => {
             response.write(s+'\n');
           }});
           response.end();
@@ -171,7 +181,7 @@ class BackupServer {
                 return;
               }
               try {
-                op.instance = new BackupInstance({ target, setname });
+                op.instance = new BackupInstance({ target, setname, userid: auth.login.userid });
                 await op.instance.createNewInstance();
                 console.log(`${(new Date()).toISOString()}: New backup started for ${setname} by ${op.client}`);
                 this.writeHead(response, 200, op.id);

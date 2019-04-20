@@ -13,6 +13,7 @@
     "filecompare": "^1.0.4",
     "ignore": "^5.0.5",
     "minimist": "^1.2.5",
+    "ip": "^1.1.5",
     "sha256-file": "^1.0.0",
     "stream-equal": "^1.1.1"
   }
