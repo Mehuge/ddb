@@ -108,7 +108,7 @@ The filesystem is implemented in the `BackupFileSystem` class. The filesystem ha
 - [ ] --remove-older remove backup instances older than a specified age
 - [x] `ddb list` list backups
 - [x] add ability to select an increment to list / verify / support
-- [ ] add support for backup configs `node backup.js --config <path-to-config>`
+- [ ] add support for backup configs `node ddb.js --config <path-to-config>`
 - [ ] add reporting options (email, status file ...)
 - [x] networking: add ability to backup over the network - --server mode
 - [x] networking: add restore support over network
@@ -170,7 +170,7 @@ Verify the `ddb` backup verbosely (same as specifying `--verify` during the back
 Verify and compare
 --
 ```
-node backup.js --to L:\BACKUPS\DDB --set-name ddb --verify-and-compare --verbose
+node ddb.js --to L:\BACKUPS\DDB --set-name ddb --verify-and-compare --verbose
 ```
 Like verify excpet that the backup files for the current instance are compared (byte-for-byte) with the originals.
 
