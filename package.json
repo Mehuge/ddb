@@ -1,5 +1,5 @@
 {
-  "name": "ddb",
+  "name": "dd-backup",
   "version": "0.0.1-beta.1",
   "description": "de-duplicating backup",
   "main": "backup.js",
