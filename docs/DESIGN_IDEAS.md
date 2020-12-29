@@ -6,7 +6,7 @@ The problem with log files is, they change, often they change a lot. The problem
 
 I am not too worried about the impact this has on disk space, every night a new copy of the log file stored in the has file system, because as old backups are remove, so will old copies of these log files, releasing the space again. Also, they are compressed.
 
-The problem I want to solve is the client sending the file over the network, because atm it sends the whole log file, ever increasing in size, ever time it backs up.
+The problem I want to solve is the client sending the file over the network, because atm it sends the whole log file, ever increasing in size, every time it backs up.
 
 The current process boils down to this:
 
@@ -58,7 +58,7 @@ end while
 send EOF
 ```
 
-It should group adjacent copyies into a single copy instruction.
+It should group adjacent copies into a single copy instruction.
 
 Perhaps in the future (`fstype: hash-v6`?)
 ==
