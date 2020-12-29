@@ -187,7 +187,7 @@ class BackupServer {
                 this.writeHead(response, 200, op.id);
                 response.end();
               } catch(e) {
-                console.log(`${(new Date()).toISOString()}: Failed to started for ${setname} by ${op.client}`);
+                console.log(`${(new Date()).toISOString()}: Failed to start for ${setname} by ${op.client}`);
                 console.dir(e);
                 delete running[setname];
                 throw e;

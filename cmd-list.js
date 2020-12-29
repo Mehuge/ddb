@@ -15,7 +15,7 @@ class List {
     accessKey && await target.login();
 
     // List
-    target.list({ setname, when, filter, userid });
+    await target.list({ setname, when, filter, userid });
 
     // logout
     accessKey && await target.logout();
