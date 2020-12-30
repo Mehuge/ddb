@@ -2,6 +2,7 @@ const { BackupInstance, BackupOptions, BackupTarget, BackupLog } = require('./li
 const url = require('url');
 const path = require('path');
 const server = require('./lib/server');
+const fs = require('./lib/fs');
 
 class BackupServer {
   static async exec(args) {
@@ -15,7 +16,8 @@ class BackupServer {
     const port = opts.port || 4444;
     const bind = opts.bind || '0.0.0.0';
     const https = opts.https || (port.toString().substr(-3) == '443');
-    const server = new BackupServer({ target, port, bind, https, verbose });
+    const cert = opts.cert || '';
+    const server = new BackupServer({ target, port, bind, https, cert, verbose });
     await server.run();
   }
 
@@ -33,19 +35,26 @@ class BackupServer {
     });
   }
 
-  constructor({ target, port, bind, https, verbose }) {
+  constructor({ target, port, bind, https, cert, verbose }) {
     this.target = target;
     this.port = port;
     this.bind = bind;
     this.protocol = `http${https ? 's' : ''}`;
     this.http = require(this.protocol);
     this.verbose = verbose;
+    this.cert = cert;
     this.running = {};
   }
 
   async run() {
+    let options;
+    switch(this.protocol) {
+      case 'https':
+        options = { key: await fs.readFile(this.cert + 'key.pem'), cert: await fs.readFile(this.cert + 'cert.pem') };
+        break;
+    }
     return new Promise((resolve, reject) => {
-      const http = this.http = this.http.createServer(this.handleRequest.bind(this));
+      const http = this.http = this.http.createServer(options, this.handleRequest.bind(this));
       http.listen(this.port, this.bind, async (err) => {
         if (err) return reject(err);
         console.log(`${this.protocol} server is running on port ${this.port}`);
@@ -104,17 +113,22 @@ class BackupServer {
       }
 
       // Make sure this is an authenticated request.
-      const authorization = (request.headers['authorization'] || '').split(' ');
-      if (authorization.length == 2 && authorization[0] == 'token') {
-        const address = request.socket.remoteAddress;
-        auth = await server.auth.authenticate({ address, token: authorization[1] });
-      } else {
-        auth = null;
-      }
-      if (!auth) {
-        this.writeHead(response, 403, 'not allowed');
-        response.end();
-        return;
+      let token, userid;
+      if (server.auth.enabled()) {
+        const authorization = (request.headers['authorization'] || '').split(' ');
+        if (authorization.length == 2 && authorization[0] == 'token') {
+          const address = request.socket.remoteAddress;
+          token = authorization[1];
+          auth = await server.auth.authenticate({ address, token });
+          userid = auth.login.userid;
+        } else {
+          auth = null;
+        }
+        if (!auth) {
+          this.writeHead(response, 403, 'not allowed');
+          response.end();
+          return;
+        }
       }
 
       switch(verb) {
@@ -153,7 +167,7 @@ class BackupServer {
           response.setHeader('Content-Type', 'text/plain; charset=utf-8');
           response.setHeader('Transfer-Encoding', 'chunked');
           this.writeHead(response, 200, 'OK', { 'Content-Type': 'text/plain' });
-          await this.target.verify({ setname, when, userid: auth.login.userid, verbose, log: (s) => {
+          await this.target.verify({ setname, when, userid, verbose, log: (s) => {
             response.write(s+'\n');
             if (this.verbose) console.log(s);
           }});
@@ -165,7 +179,7 @@ class BackupServer {
           when = parts.shift();
           const filter = {};
           this.writeHead(response, 200, 'OK', { 'Content-Type': 'text/plain' });
-          await this.target.list({ setname, when, userid: auth.login.userid, filter, log: (s) => {
+          await this.target.list({ setname, when, userid, filter, log: (s) => {
             response.write(s+'\n');
           }});
           response.end();
@@ -174,14 +188,14 @@ class BackupServer {
           switch(parts.shift()) {
             case 'create':
               setname = parts.shift();
-              op = this.registerOp({ type: 'backup', request, setname, token: authorization[1] });
+              op = this.registerOp({ type: 'backup', request, setname, token });
               if (op.error) {
                 this.writeHead(response, op.error, `${op.type} is already running for ${op.id}`);
                 response.end();
                 return;
               }
               try {
-                op.instance = new BackupInstance({ target, setname, userid: auth.login.userid });
+                op.instance = new BackupInstance({ target, setname, userid });
                 await op.instance.createNewInstance();
                 console.log(`${(new Date()).toISOString()}: New backup started for ${setname} by ${op.client}`);
                 this.writeHead(response, 200, op.id);
@@ -196,7 +210,7 @@ class BackupServer {
             case 'log':
               setname = parts.shift();
               op = running[setname];
-              if (!op || !op.instance || op.token != authorization[1]) {
+              if (!op || !op.instance || op.token != token) {
                 this.writeHead(response, 401, 'backup is not running');
                 response.end();
                 return;
@@ -230,7 +244,7 @@ class BackupServer {
             case 'finish':
               setname = parts.shift();
               op = running[setname];
-              if (!op || !op.instance || op.token != authorization[1]) {
+              if (!op || !op.instance || op.token != token) {
                 this.writeHead(response, 401, 'backup is not running');
                 response.end();
               }
@@ -243,7 +257,7 @@ class BackupServer {
               setname = parts.shift();
               const when = parts.shift();
               op = running[setname];
-              if (!op || !op.instance || op.token != authorization[1]) {
+              if (!op || !op.instance || op.token != token) {
                 this.writeHead(response, 401, 'backup is not running');
                 response.end();
               }
@@ -256,7 +270,7 @@ class BackupServer {
             case 'abandon':
               setname = parts.shift();
               op = running[setname];
-              if (!op || !op.instance || op.token != authorization[1]) {
+              if (!op || !op.instance || op.token != token) {
                 this.writeHead(response, 401, 'backup is not running');
                 response.end();
               }
