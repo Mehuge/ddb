@@ -7,7 +7,7 @@ class List {
     const opts = (new BackupOptions()).parse(args);
 
     // Configure backup from options
-    const { fast, fstype, verbose, destination, filter, setname, when, accessKey, userid } = opts;
+    const { fast, fstype, verbose, destination, filter, setname, when, accessKey, userid, since, sources } = opts;
     const target = new BackupTarget({ destination, fast, fstype, verbose , accessKey});
     await target.connect(false);
 
@@ -15,7 +15,7 @@ class List {
     accessKey && await target.login();
 
     // List
-    await target.list({ setname, when, filter, userid });
+    await target.list({ setname, when, filter, userid, since, sources });
 
     // logout
     accessKey && await target.logout();
