@@ -176,7 +176,7 @@ class BackupServer {
           return;
         case 'list':
           setname = parts.shift();
-          when = parts.shift();
+          when = parts.shift() || 'current';
           const filter = {};
           this.writeHead(response, 200, 'OK', { 'Content-Type': 'text/plain' });
           await this.target.list({ setname, when, userid, filter, log: (s) => {
@@ -284,26 +284,32 @@ class BackupServer {
           switch(parts.shift()) {
             case 'get':
               setname = parts.shift();
-              when = parts.shift();
+              when = parts.shift() || 'current';
               body = await BackupServer.getRequestBody(request);
               const filter = (body && JSON.parse(body)) || { filters: [] };
               const address = request.socket.address();
               console.log(`Restore started for ${setname}.${when} filter ${filter.filters.join(' ')} by ${address.address}:${address.port}`);
               const instance = new BackupInstance({ target, setname });
-              this.writeHead(response, 200, 'OK', { 'Content-Type': 'text/json' });
-              await instance.restore({ when, filter }, (entry) => {
-                let output;
-                switch(entry.type) {
-                  case 'SOURCE':
-                    output = `${entry.type} ${entry.root}`;
-                    break;
-                  default:
-                    output = BackupLog.entryToString(entry);
-                    break;
-                }
-                if (this.verbose) console.log(output);
-                response.write(output + '\n');
-              });
+              if (await instance.exists(when)) {
+                this.writeHead(response, 200, 'OK', { 'Content-Type': 'text/json' });
+                await instance.restore({ when, filter }, (entry) => {
+                  let output;
+                  switch(entry.type) {
+                    case 'SOURCE':
+                      output = `${entry.type} ${entry.root}`;
+                      break;
+                    default:
+                      output = BackupLog.entryToString(entry);
+                      break;
+                  }
+                  if (this.verbose) console.log(output);
+                  response.write(output + '\n');
+                });
+              } else {
+                const message = `Restore failed, specified backup ${setname}.${when} does not exist`;
+                response.writeHead(503, message);
+                console.error(message);
+              }
               response.end();
               return;
           }
