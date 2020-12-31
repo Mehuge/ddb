@@ -24,7 +24,7 @@ wget -qO - https://github.com/Mehuge/ddb/raw/master/install.sh | bash
 Motivation
 ===
 
-I noticed that with a lot of our backups there is an aweful lot of duplicated data stored in them,
+I noticed that with a lot of our backups there is an awful lot of duplicated data stored in them,
 for example, copies of whole source trees, or product installations. Consider also that different
 versions (dev, beta, production) of a product often share a large amount of identical files.
 
@@ -43,19 +43,19 @@ file system.
 
 Proof of concept
 --
-So I set about coding a proof-of-concept backup system to test out a) if it was feasable, and b) what
+So I set about coding a proof-of-concept backup system to test out a) if it was feasible, and b) what
 kind of space savings could be achieved. Enter ddb, de-duplicating backup.
 
 Hashing
 --
 I chose sha256 as the hashing algorithm but the issue with a hash is that there are potentially collisions, though highly unlikely it is a possibility, so I had to build in some integrity checks into the system.
 
-sha256 hashs are 64 hexadecimal characters long. These are stored in a folder called `files.db` within the backup destination. The files are stored in buckets implemented as two levels of directories [00-FF]/[00-FF]. Which bucket a hash is placed into is calculated by splitting the hexdecimal hash into two equal length strings, and calculating the crc8 hash of each, these become the folder names for the bucket.
+sha256 hashs are 64 hexadecimal characters long. These are stored in a folder called `files.db` within the backup destination. The files are stored in buckets implemented as two levels of directories [00-FF]/[00-FF]. Which bucket a hash is placed into is calculated by splitting the hexadecimal hash into two equal length strings, and calculating the crc8 hash of each, these become the folder names for the bucket.
 
 To handle potential hash clashes (two actually different files, with the same hash), by default the
 backup compares a hit in the hash file system byte-by-byte with the source file, and if they are different, will store the file as a variant. These variant numbers are appended to the hash as .0 .1 .2 etc. I have yet to see this happen.
 
-There is a --fast option which skips this aditional integrity, and the soon to come client/server version will by default use --fast.
+There is a --fast option which skips this additional integrity, and the soon to come client/server version will by default use --fast.
 
 Backup Targets
 --
@@ -164,7 +164,7 @@ node ddb.js list ~/backups/DDB --userid=username
 Setting up an HTTPS server.
 ==
 
-ddb.js supports backing up over https rather than http, which is essential if backing up accross a public network. Enabling https on the server requires the following setup.
+ddb.js supports backing up over https rather than http, which is essential if backing up across a public network. Enabling https on the server requires the following setup.
 
 1. Generate a key-cert pair. Run `create-self-cert.sh` to generate a `key.pem` and `cert.pem` file for use by the https server. Place these in the directory the server is run from.
 
@@ -180,12 +180,12 @@ By default the server will look for `key.pem` and `cert.pem` in the current fold
 node ddb.sh server ~/backups --cert "certs/ddb-" --verbose
 ```
 
-Note: `--cert` implies `--https` so both options do not need to be specified. In fact `--cert` without a prefix is equivelent to specifying `--https` without `--cert`.
+Note: `--cert` implies `--https` so both options do not need to be specified. In fact `--cert` without a prefix is equivalent to specifying `--https` without `--cert`.
 
 Accessing an https backup server
 --
 
-Accessing an https backup server is the same as accessing the http backup server, except specifiy `https` rather than `http` in the destination uri.
+Accessing an https backup server is the same as accessing the http backup server, except specify `https` rather than `http` in the destination uri.
 
 Usage Examples
 ==
@@ -252,9 +252,9 @@ node ddb.js server K:/BACKUPS/SERVER --https --verbose
 
 Backup servers are hard coded to create a hash-v4 (compressed) file system, and automatically enable --fast mode.
 
-`hash-v4` is used because files are transfered to the server already gzipped to save network bandwidth so it make little sense to decompress them just to put them in a hash-v3 file system, instead they are copied right from the http stream into the file system as-is, so the server doesn't do any compression, the compression is all done by the client.
+`hash-v4` is used because files are transferred to the server already gzipped to save network bandwidth so it make little sense to decompress them just to put them in a hash-v3 file system, instead they are copied right from the http stream into the file system as-is, so the server doesn't do any compression, the compression is all done by the client.
 
-Fast mode is used because comparing files accross the network would be too expensive, so backups rely on the hashes for comparisons. When considering a file to backup the client hashes the file, then asks the server if it has that hash, if it does, the client just says log this file as backed up. If not, it compresses the file and sends it to the server.  Only changed files are ever transmitted over the network.
+Fast mode is used because comparing files across the network would be too expensive, so backups rely on the hashes for comparisons. When considering a file to backup the client hashes the file, then asks the server if it has that hash, if it does, the client just says log this file as backed up. If not, it compresses the file and sends it to the server.  Only changed files are ever transmitted over the network.
 
 Future: An optimisation here may be to do some kind of rdiff of the file, once we know we need to send the file, if the server can find a previous version of the file from the previous backup set log, it could produce a hash chain for that version (hashes for each block) and send the hash chain to the client, the client could then work out which parts of the file it needs to send to the server so it can construct the new version of the file from the previous version. This would be great for backing up log files, as only the new parts of the log files would be sent.
 
@@ -274,7 +274,7 @@ Commands:
 | `clean`   | Clean a backup destination
 | `server`  | Start ddb in server mode
 
-General Options:
+#### General Options:
 
 `--to` or `--dest`
 
@@ -318,13 +318,13 @@ Provided a detailed output of activity and progress.
 
 `--deep-scan`
 
-This option tells the file-scan logic to scan sub-folders of ingored folders. No files in the ignored folder will be backed up, but if the folder contains sub-folders that are not also ignored, they will be backed up.
+This option tells the file-scan logic to scan sub-folders of ignored folders. No files in the ignored folder will be backed up, but if the folder contains sub-folders that are not also ignored, they will be backed up.
 
 `--older-than`
 
 Not Yet Implemented.
 
-`backup` Options:
+#### `backup` Options:
 
 `--from` or `--source`
 
@@ -332,7 +332,7 @@ Specifies where to back up from. Multiple `--from` options can be specified.
 
 `--fstype`
 
-When running a `backup` or `server` if the desination does not exist, it will be created using the specified fstype. Only `hash-v3` and `hash-v4` are supported. `hash-v4` is the default and recommended file system type.
+When running a `backup` or `server` if the destination does not exist, it will be created using the specified fstype. Only `hash-v3` and `hash-v4` are supported. `hash-v4` is the default and recommended file system type.
 
 `--no-backup`
 
@@ -356,7 +356,7 @@ Not supported when destination is a server.
 
 Verify and compare the backup. This will check each file exists in the backup destination and also do a byte-by-byte compare the backup file with the source version and report if any files have changed.
 
-`list` Options:
+##### `list` Options:
 
 `--sources`
 
@@ -366,13 +366,13 @@ Also list each source within a backup instance. A backup sources is the original
 
 List each backup instance since a specified timestamp. So for example, if wanting to find a backup that was done on or after the 3rd of August 2020, specify `--since 20200803T000000000Z`
 
-`verify` Options:
+##### `verify` Options:
 
 `--compare-with`
 
 Specifies the root of the folder to compare the backup to, if for instance the original folder has moved or comparing with another copy.
 
-`restore` Options:
+#### `restore` Options:
 
 `--output`
 
@@ -380,7 +380,7 @@ Specify where to restore files to.
 
 `--force`
 
-`server` Options:
+#### `server` Options:
 
 Force overwrite of existing content in the output folder.
 
@@ -390,7 +390,7 @@ Bind to the specified IP address. Typically `0.0.0.0` or `127.0.0.1`. The defaul
 
 `--port <port>`
 
-Bind to the specified port number. Note: If `port` ends with 443, `https` is assumed unless otherwise speicied. So ports 443, 4443 and 44443 are all assumed to be `https` ports.
+Bind to the specified port number. Note: If `port` ends with 443, `https` is assumed unless otherwise specified. So ports 443, 4443 and 44443 are all assumed to be `https` ports.
 
 `--http`
 
