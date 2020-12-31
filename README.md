@@ -428,8 +428,7 @@ Does not nor any plans to support:
 - not suited to backing up large, changing files
 - does not store differences between versions of a file, but whole copies
 
+--
 <style>
 th:empty { display: none; }
-p { color: #444; }
-h1,h2,h3,h4,h5 { color: #000; }
 </style>
