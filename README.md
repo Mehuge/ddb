@@ -21,6 +21,13 @@ or if you prefer to use `wget`
 wget -qO - https://github.com/Mehuge/ddb/raw/master/install.sh | bash
 ```
 
+Installing using npm
+--
+```
+npm i -g dd-backup
+```
+Note: This will allow ddb to be run using `ddb` rather than `node ddb.js` which may be preferable.
+
 Motivation
 ===
 
