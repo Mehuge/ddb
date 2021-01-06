@@ -1,0 +1,7 @@
+test*.cmd
+*.pem
+.vscode
+rdiff-test.js
+docs
+auth.json
+tests
