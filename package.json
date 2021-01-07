@@ -1,9 +1,9 @@
 {
   "name": "dd-backup",
-  "version": "1.0.0-beta.4",
+  "version": "1.0.0-beta.5",
   "description": "de-duplicating backup",
-	"bin": {
-		"ddb": "ddb.js"
+  "bin": {
+    "ddb": "ddb.js"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"

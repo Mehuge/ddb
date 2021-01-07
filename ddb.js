@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-const DDB_VERSION = '1.0.0-beta.4';
+const DDB_VERSION = '1.0.0-beta.5';
 
 async function exec(what, args) {
   if (args[0] && args[0].substr(0,2) != '--') {
