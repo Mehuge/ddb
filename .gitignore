@@ -1,6 +1,5 @@
 node_modules
-test.cmd
-test.*.cmd
+test.*
 auth.json
 *.pem
 

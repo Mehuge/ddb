@@ -11,7 +11,7 @@ class Backup {
     })).parse(args);
 
     // Configure backup from options
-    const { setname, sources, backup, verify, compare, fast, fstype, verbose, destination, accessKey } = opts;
+    const { setname, sources, backup, verify, compare, fast, fstype, verbose, destination, accessKey, checkHash } = opts;
     const target = new BackupTarget({ destination, fast, fstype, verbose, accessKey });
     await target.connect(opts.backup);
 
@@ -31,7 +31,8 @@ class Backup {
           src: source.src,
           filters: source.filters,
           subdirs: source.subdirs,
-          verbose: opts.verbose,
+          verbose,
+          checkHash
         }))
     });
 

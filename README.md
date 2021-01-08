@@ -349,6 +349,24 @@ Deprecated. This rather strange option tells the `backup` command to not actuall
 
 When backing up, when a hash match is found, do not perform a full file compare, simply rely on the hash + size to determine if a file is already backed up. This significantly speeds up backups at the expense of the incredibly low chance that two files of the same size produce the same hash. When the destination is a backup server, this option is always on.
 
+`--check-hash`
+
+Recent versions of ddb optimise the scanning for files to back up by utilising the last backup time, and index to check only files whos modified time is not more recent than the start of the last backup and where the size has not changed. If both conditions are met for a file, the hash from the previous backup is used rather than calculated. This can speed up the backup process significantly.
+
+The `--check-hash` option disables this behaviour and always computes the hash from the files contents regardless of modification time.
+
+Note that, when communicating with a backup server over http or https, the hash is always caclulated from the local file.
+
+To illustrate the amount of speedup not checking hash can give, here is part of a backup list with the last backup not using the `--check-hash` option. Down from 10 minutes to 2 seconds.
+
+```
+2021-01-04T06:59:55.181Z 1260 files 2174.27 MB took 665.967 seconds
+2021-01-05T06:50:33.373Z 1260 files 2174.27 MB took 680.998 seconds
+2021-01-06T06:55:01.378Z 1260 files 2174.27 MB took 589.48 seconds
+2021-01-08T06:11:58.616Z 1261 files 2174.27 MB took 667.215 seconds
+2021-01-08T22:53:19.972Z 1263 files 2174.27 MB took 2.135 seconds
+```
+
 `--clean`
 
 Run a clean after backup. [Q. why would we want to do this?]  See `clean` command.
