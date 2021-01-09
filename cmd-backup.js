@@ -1,4 +1,5 @@
 const { BackupTarget, BackupSource, BackupSet, BackupOptions } = require('./lib');
+const { memstats } = require('./lib/debug');
 
 class Backup {
   static async exec(args) {
@@ -56,6 +57,9 @@ class Backup {
 
     // cleanup
     target.destroy();
+
+    // dump memory stats
+    if (verbose) memstats();
   }
 };
 
