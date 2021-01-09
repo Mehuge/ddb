@@ -26,6 +26,7 @@ class Backup {
     // Setup backup set
     const backupset = new BackupSet({
       setname,
+      verbose,
       sources: backup && sources.map
         (source => new BackupSource({
           src: source.src,
@@ -33,7 +34,7 @@ class Backup {
           subdirs: source.subdirs,
           verbose,
           checkHash
-        }))
+        })),
     });
 
     // Run the backup job

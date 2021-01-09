@@ -435,15 +435,15 @@ TODO
 ==
 Encryption
 --
-Implement this as hash-v5 which is compressed+encrypted. This would work by providing a key at runtime (via environment, option or prompt) that hash-v5 will use to encrypt/decrypt the files.
+Implement this as hash-v5 which is encrypted+compressed. This would work by providing a key at runtime (via environment, option or prompt) that hash-v5 will use to encrypt/decrypt the files.
 
-The last stage will be encryption, that is the files will be compressed before encrypted and decrypted before decompressed. This is because in client-server mode the client does the compression, so files being stored in the file system are already compressed.
+Encryption will happen before compression. The client will be entirely responsible for encryption.
 
 *Local backup:*<br>
-disk -> compress -> encrypted -> disk
+disk -> encrypt -> compress -> disk
 
 *Remote backup:*<br>
-disk -> compress -> network (https) -> encrypt -> disk
+disk -> encrypt -> compress -> network (http/https) -> disk
 
 Limitations
 ==
