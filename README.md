@@ -1,11 +1,22 @@
 
 De-Duplicating Backup
 ==
-Experimental (proof-of-concept) hash based backup system.
+Experimental (proof-of-concept turned actually used to backup my stuff) hash based backup system.
+
+There are far superior deduplicating backup softwares out there, such as duplicacy, restic and borg (three I am familar with) that all use far superior variable sized chunking deduplication algorithms to do the deduplication and work more efficiently and in a wider range of situations.
+
+But this project isn't about being the best deduplicator, or the most feature rich, or being suitable for every type of backup. It's more of an experiment, a programming excercise and a tool to meet a particular need of mine, to backup source code working environments and document folders.
 
 Install
 ==
 `ddb` requires `node` v10 or later to be already installed.
+
+Installing using npm
+--
+```
+npm i -g dd-backup
+```
+Note: This will allow ddb to be run using `ddb` rather than `node ddb.js` which may be preferable.
 
 Installing using the install script
 --
@@ -21,12 +32,13 @@ or if you prefer to use `wget`
 wget -qO - https://github.com/Mehuge/ddb/raw/master/install.sh | bash
 ```
 
-Installing using npm
+Installing via git
 --
 ```
-npm i -g dd-backup
+git clone https://github.com/Mehuge/ddb
+cd ddb
 ```
-Note: This will allow ddb to be run using `ddb` rather than `node ddb.js` which may be preferable.
+Run via `node ddb.js ...`
 
 Motivation
 ===
@@ -62,15 +74,17 @@ sha256 hashs are 64 hexadecimal characters long. These are stored in a folder ca
 To handle potential hash clashes (two actually different files, with the same hash), by default the
 backup compares a hit in the hash file system byte-by-byte with the source file, and if they are different, will store the file as a variant. These variant numbers are appended to the hash as .0 .1 .2 etc. I have yet to see this happen.
 
-There is a --fast option which skips this additional integrity, and the soon to come client/server version will by default use --fast.
+There is a `--fast` option which skips this additional integrity, and the soon to come client/server version will by default use `--fast`.
+
+In the Future: The `--fast` option will be phased out. I have yet to see a clash, and don't think the byte-by-byte compare is worth it. Perhaps adding a `--slow` option instead.
 
 Backup Targets
 --
 Backups target a destination which is either an non-existant or empty folder, or an existing
-backup destination, or a backup server over http. If the folder does not exist, or is empty it will be created and/or initialised.
+backup destination, or a backup server over http or https. If the folder does not exist, or is empty it will be created and/or initialised.
 
-The backup filesystem is stored in files.db sub-folder, and backup sets (and their increments) are
-stored in the `backups` subfolder.  There is a config.json which contains the fs-type of the
+The backup filesystem is stored in a `files.db` subfolder, and backup sets (and their increments) are
+stored in the `backups` subfolder.  There is a `config.json` which contains the fs-type of the
 backup destination.
 
 Backup destinations (`--to` or `--dest`) are designed to be shared. The more it is shared, the more de-duplication occurs. It is possible to have a separate backup destination for each backup, and that will de-duplicate files within that backup, but the destination can also be shared by multiple backup sets.
@@ -85,11 +99,11 @@ A backup source (--from) is a root path, optionally sub-folders to backup and/or
 
 Incremental backups
 --
-The concept of full, differential or incremental backups doesn't make sense in this backup system. Every backup is incremental, the first backup just happens to be the largest increment.
+The concept of full, differential or incremental backups doesn't make sense in this type of backup system. Every backup is incremental, the first backup just happens to take longer because it potentially has to backup everything.
 
 Managing increments
 ==
-Because of the nature of the backup format, the hash based file system that is used to store files, managing increments is really simple, for instance to remove the first backup, just delete its index, don't need to merge it with the next increment. Once an increment or increments have been removed, then run a cleanup on the filesystem which will check all the hashs still in use by increments, and remove ones that are no longer referenced. This can be done separately from the removal of the increment.
+Because of the nature of the backup format, the hash based file system that is used to store files, managing increments is really simple, for instance to remove the first backup, just delete its index, don't need to merge it with the next increment. Once an increment or increments have been removed, then run a `clean` on the filesystem which will check all the hashs still in use by increments, and remove ones that are no longer referenced. This can be done separately from the removal of the increment.
 
 **File System**
 
@@ -130,69 +144,9 @@ The filesystem is implemented in the `BackupFileSystem` class. The filesystem ha
 - [ ] `ddb cat` like cp but to standard output.
 - [ ] `ddb search` search for a file matching pattern
 - [ ] Make `--fast` the default for local backups. Add `--no-fast` to disable.
+- [ ] Add option to remove a file from a backup set (and all its instances)
 
-Authentication
-==
-Basic authentication is supported by the http(s) server and client. Authentication on the server is optional, and enabled through the presence of a `auth.json` configuration file in the backup destination on the server. No additional option need to be passed to the `ddb.js server` command line.
-```json
-{
-  "keys": {
-    "{access-key}": {
-      "userid": "{username}",
-      "email": "{users@email-address.em}",
-      "allow": [ "10.0.0.0/16", "192.168.0.0/24" ]
-    },
-    "9WybPy1HQWlB1e79xUb0m76clf0sNsxv": {
-      "userid": "bob",
-      "email": "bob@fake-email.com",
-      "allow": []
-    }
-  }
-}
-```
-Once defined, the server will refuse to communicate with any client that has not first authenticated by supplying the pre-shared secret (or `access-key`). Each `access-key` maps to a userid. Backup indexes for each userid are stored separately under `backups/<userid>/<set-name>.<timestamp>`.
 
-Authenticating a client
---
-A client connecting to a server that is using authentication will need to supply the pre-shared `access-key`.
-
-```
-node ddb.js backup https://remote-backup-server:4444/ --from . --access-key 9WybPy1HQWlB1e79xUb0m76clf0sNsxv
-```
-
-Server side access to authenticated clients backups
---
-Occasionally an administrator of a backup server may need to access backups on behalf of a user. In order to be able to do this on a server that is authenticating (storing backup indexes in `<userid>` subfolders) the userid must be specified using the `--userid` command line option.
-
-```
-node ddb.js list ~/backups/DDB --userid=username
-```
-
-Setting up an HTTPS server.
-==
-
-ddb.js supports backing up over https rather than http, which is essential if backing up across a public network. Enabling https on the server requires the following setup.
-
-1. Generate a key-cert pair. Run `create-self-cert.sh` to generate a `key.pem` and `cert.pem` file for use by the https server. Place these in the directory the server is run from.
-
-2. Run the server with the `--https` option as follows:
-
-```
-node ddb.sh server ~/backups --https --verbose
-```
-
-By default the server will look for `key.pem` and `cert.pem` in the current folder. This can be modified by specifying the `--cert` option with a prefix. For example, the following server command line will tell the server to look for `certs/ddb-key.pem` and `certs/ddb-cert.pem` instead.
-
-```
-node ddb.sh server ~/backups --cert "certs/ddb-" --verbose
-```
-
-Note: `--cert` implies `--https` so both options do not need to be specified. In fact `--cert` without a prefix is equivalent to specifying `--https` without `--cert`.
-
-Accessing an https backup server
---
-
-Accessing an https backup server is the same as accessing the http backup server, except specify `https` rather than `http` in the destination uri.
 
 Usage Examples
 ==
@@ -264,6 +218,102 @@ Backup servers are hard coded to create a hash-v4 (compressed) file system, and 
 Fast mode is used because comparing files across the network would be too expensive, so backups rely on the hashes for comparisons. When considering a file to backup the client hashes the file, then asks the server if it has that hash, if it does, the client just says log this file as backed up. If not, it compresses the file and sends it to the server.  Only changed files are ever transmitted over the network.
 
 Future: An optimisation here may be to do some kind of rdiff of the file, once we know we need to send the file, if the server can find a previous version of the file from the previous backup set log, it could produce a hash chain for that version (hashes for each block) and send the hash chain to the client, the client could then work out which parts of the file it needs to send to the server so it can construct the new version of the file from the previous version. This would be great for backing up log files, as only the new parts of the log files would be sent.
+
+Setting up an HTTPS server.
+--
+
+ddb.js supports backing up over https rather than http, which is essential if backing up across a public network. Enabling https on the server requires the following setup.
+
+1. Generate a key-cert pair. Run `create-self-cert.sh` to generate a `key.pem` and `cert.pem` file for use by the https server. Place these in the directory the server is run from.
+
+2. Run the server with the `--https` option as follows:
+
+```
+node ddb.sh server ~/backups --https --verbose
+```
+
+By default the server will look for `key.pem` and `cert.pem` in the current folder. This can be modified by specifying the `--cert` option with a prefix. For example, the following server command line will tell the server to look for `certs/ddb-key.pem` and `certs/ddb-cert.pem` instead.
+
+```
+node ddb.sh server ~/backups --cert "certs/ddb-" --verbose
+```
+
+Note: `--cert` implies `--https` so both options do not need to be specified. In fact `--cert` without a prefix is equivalent to specifying `--https` without `--cert`.
+
+Accessing an https backup server
+--
+
+Accessing an https backup server is the same as accessing the http backup server, except specify `https` rather than `http` in the destination uri.
+
+Server Authentication
+--
+Basic authentication is supported by the http(s) server and client. Authentication on the server is optional, and enabled through the presence of a `auth.json` configuration file in the backup destination on the server. No additional option need to be passed to the `ddb.js server` command line.
+```json
+{
+  "keys": {
+    "{access-key}": {
+      "userid": "{username}",
+      "email": "{users@email-address.em}",
+      "allow": [ "10.0.0.0/16", "192.168.0.0/24" ]
+    },
+    "9WybPy1HQWlB1e79xUb0m76clf0sNsxv": {
+      "userid": "bob",
+      "email": "bob@fake-email.com",
+      "allow": []
+    }
+  }
+}
+```
+Once defined, the server will refuse to communicate with any client that has not first authenticated by supplying the pre-shared secret (or `access-key`). Each `access-key` maps to a userid. Backup indexes for each userid are stored separately under `backups/<userid>/<set-name>.<timestamp>`.
+
+Authenticating a client
+--
+A client connecting to a server that is using authentication will need to supply the pre-shared `access-key`.
+
+```
+node ddb.js backup https://remote-backup-server:4444/ --from . --access-key 9WybPy1HQWlB1e79xUb0m76clf0sNsxv
+```
+
+Server side access to authenticated clients backups
+--
+Occasionally an administrator of a backup server may need to access backups on behalf of a user. In order to be able to do this on a server that is authenticating (storing backup indexes in `<userid>` subfolders) the userid must be specified using the `--userid` command line option.
+
+```
+node ddb.js list ~/backups/DDB --userid=username
+```
+
+Check Backup Destination Integrity
+--
+The `verify` command run without specifying a setname will perform a fsck-style integrity check of the backup destination and backup instances.
+```
+node ddb.js verify ~/backups/DDB
+```
+This will report any missing, damaged or orphaned hashes.
+```
+ERROR 69227c3030cce65b836a78bd748a78f5cf042fe24617e65c0ac2ef3e4ed564df.0.5372
+ORPHANED 49d17dd3336f7caac24927f3609db04d6af7d23bbc21ac358b8f596009001b11.0.1618
+MISSING be87e5f8ea56e415ffd9ea0c371e86ecd4f520e4363e7d662d0c10c6ac20dafb.0.5222
+Total 1349 Verified 1346 Orphaned 1 Damaged 1 Missing 1
+```
+
+Orphaned hases are nothing to worry about. They simply mean that the entry in the backup destination is no longer referenced by any of the backup instances. This can happen if unwanted backup instances are removed.
+
+Damaged and Missing hashes are however a problem, and will mean that particular version of the file contained within the hash is no longer available to any of the backup instances it is referenced in.
+
+There isn't currently a fix option for Damaged and Missing hashes. A damaged hash can be removed by manually deleting the file from within the files.db hash filesystem. It will then be considered missing rather than damaged. Missing hashes may be restored by if the correct version of the file still exists in one of the backup sources and that backup source is backed up again.
+
+In any case, it is a good idea to run backups again in the event of any corruption of the backup destination so that at lease 1 good backup is available.
+
+The `restore` command should be resilient enough such that damaged or missing hashes will not prevent the restore from proceeding just with the appropriate warnings about the files that could not be restored.
+
+Orphaned hashes can be safely removed by running the `clean` command.
+
+Cleaning a backup destination
+--
+```
+node ddb.js clean ~/backups/DDB
+```
+This will remove any orphaned hases from the backup filesystem.
 
 Command Line Options Reference
 ==
@@ -435,15 +485,15 @@ TODO
 ==
 Encryption
 --
-Implement this as hash-v5 which is encrypted+compressed. This would work by providing a key at runtime (via environment, option or prompt) that hash-v5 will use to encrypt/decrypt the files.
-
-Encryption will happen before compression. The client will be entirely responsible for encryption.
+This would work by providing a key at runtime (via environment, option or prompt) that hash-v5 will use to encrypt/decrypt the files. Encryption will happen before compression. The client will be entirely responsible for encryption.
 
 *Local backup:*<br>
 disk -> encrypt -> compress -> disk
 
 *Remote backup:*<br>
 disk -> encrypt -> compress -> network (http/https) -> disk
+
+Because of the nature of the backup system, different backup sets can use different encryption keys, however doing so will prevent deduplication from deducplicating accross backup sets. It will be recommended that where possible the same key is used for all backups to a single destination.
 
 Limitations
 ==

@@ -160,6 +160,41 @@ class BackupServer {
               return;
           }
           break;
+        case 'log':
+          switch(parts.shift()) {
+            case 'get':
+              setname = parts.shift();
+              if (setname) {
+                when = parts.shift() || 'current';
+                let instance;
+                switch(when) {
+                  case 'last':
+                    instance = new BackupInstance({ target, setname });
+                    const lastBackup = await instance.log().getLastBackup();
+                    this.writeHead(response, 200, 'OK', { 'Content-Type': 'text/json' })
+                    if (lastBackup) response.write(JSON.stringify(lastBackup));
+                    response.end();
+                    break;
+                  default:
+                    // Return requested backup list
+                    instance = new BackupInstance({ target, setname });
+                    const lines = await instance.getLinesFromInstanceLog(when);
+                    this.writeHead(response, 200, 'OK', { 'Content-Type': 'text/json' })
+                    response.write(JSON.stringify(lines));
+                    response.end();
+                    break;
+                }
+              } else {
+                this.writeHead(response, 503, 'invalid request, setname not specified');
+                response.end();
+              }
+              break;
+            default:
+              this.writeHead(response, 503, 'invalid request, action not specified');
+              response.end();
+              break;
+          }
+          break;
         case 'verify':
           setname = parts.shift();
           when = parts.shift() || 'current';
