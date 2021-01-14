@@ -169,30 +169,31 @@ class BackupServer {
                 let instance;
                 switch(when) {
                   case 'last':
-                    instance = new BackupInstance({ target, setname });
+                    instance = new BackupInstance({ target, setname, userid });
                     const lastBackup = await instance.log().getLastBackup();
                     this.writeHead(response, 200, 'OK', { 'Content-Type': 'text/json' })
                     if (lastBackup) response.write(JSON.stringify(lastBackup));
                     response.end();
-                    break;
+                    return;
                   default:
                     // Return requested backup list
-                    instance = new BackupInstance({ target, setname });
+                    instance = new BackupInstance({ target, setname, userid });
                     const lines = await instance.getLinesFromInstanceLog(when);
                     this.writeHead(response, 200, 'OK', { 'Content-Type': 'text/json' })
                     response.write(JSON.stringify(lines));
                     response.end();
-                    break;
+                    return;
                 }
               } else {
                 this.writeHead(response, 503, 'invalid request, setname not specified');
                 response.end();
+                return;
               }
               break;
             default:
               this.writeHead(response, 503, 'invalid request, action not specified');
               response.end();
-              break;
+              return;
           }
           break;
         case 'verify':
@@ -324,7 +325,7 @@ class BackupServer {
               const filter = (body && JSON.parse(body)) || { filters: [] };
               const address = request.socket.address();
               console.log(`Restore started for ${setname}.${when} filter ${filter.filters.join(' ')} by ${address.address}:${address.port}`);
-              const instance = new BackupInstance({ target, setname });
+              const instance = new BackupInstance({ target, setname, userid });
               if (await instance.exists(when)) {
                 this.writeHead(response, 200, 'OK', { 'Content-Type': 'text/json' });
                 await instance.restore({ when, filter }, (entry) => {
