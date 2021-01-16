@@ -171,8 +171,12 @@ class BackupServer {
                   case 'last':
                     instance = new BackupInstance({ target, setname, userid });
                     const lastBackup = await instance.log().getLastBackup();
-                    this.writeHead(response, 200, 'OK', { 'Content-Type': 'text/json' })
-                    if (lastBackup) response.write(JSON.stringify(lastBackup));
+                    if (lastBackup) {
+                      this.writeHead(response, 200, 'OK', { 'Content-Type': 'text/json' })
+                      response.write(JSON.stringify(lastBackup));
+                    } else {
+                      this.writeHead(response, 401, 'No Backups');
+                    }
                     response.end();
                     return;
                   default:
