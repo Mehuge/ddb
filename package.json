@@ -5,8 +5,13 @@
   "bin": {
     "ddb": "ddb.js"
   },
+  "main": "ddb.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "npm run clean && npm run bundle && npm run package",
+    "clean": "rimraf dist/*",
+    "bundle": "browserify --node --exclude supports-color ddb.js | uglifyjs >dist/ddb.js",
+    "package": "pkg -t node10-win-x64,node10-linux-x64,node10-macos-x64 --output dist/ddb ddb.js"
   },
   "author": "austin.france@redskyit.com",
   "license": "ISC",
@@ -19,5 +24,9 @@
     "sha256-file": "^1.0.0",
     "stream-equal": "^1.1.1"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "browserify": "^16.2.3",
+    "rimraf": "^2.6.2",
+    "uglify-js": "^3.14.1"
+  }
 }

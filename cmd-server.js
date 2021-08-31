@@ -40,7 +40,11 @@ class BackupServer {
     this.port = port;
     this.bind = bind;
     this.protocol = `http${https ? 's' : ''}`;
-    this.http = require(this.protocol);
+	if (https) {
+		this.http = require('https');
+	} else {
+		this.http = require('http');
+	}
     this.verbose = verbose;
     this.cert = cert;
     this.running = {};
