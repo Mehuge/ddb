@@ -1,6 +1,6 @@
 {
   "name": "dd-backup",
-  "version": "1.0.0-beta.10",
+  "version": "1.0.0-beta.11",
   "description": "de-duplicating backup",
   "repository": {
     "type": "git",
