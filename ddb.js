@@ -43,7 +43,6 @@ async function run(args) {
         await exec('./cmd-server', args);
         return;
     }
-    args.shift();
   }
 }
 
