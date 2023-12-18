@@ -23,7 +23,7 @@ A couple of approaches here:
 
 1. pre-download last backup list and use that to work out which files have changed so not asking server if has a file it will already have (subject to backup being integral). Perhaps an option to skip this step to be used when repairing broken backups.
 
-1. batch requests, so have you got these? you don't have these, here they are. The here they are bit will need to be clever as it means sending multiple binary files over a single http request.
+2. batch requests, so have you got these? you don't have these, here they are. The here they are bit will need to be clever as it means sending multiple binary files over a single http request.
 
   POST /fs/has/batch
   <size> <hash>
@@ -46,4 +46,3 @@ A couple of approaches here:
   <size> <hash> <time> ... <name>\n
   <size> <hash> <time> ... <name>\n
   200 OK
-
