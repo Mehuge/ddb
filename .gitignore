@@ -3,5 +3,6 @@ test.*
 auth.json
 dist
 *.pem
+temp
 
 \.vscode/launch\.json
