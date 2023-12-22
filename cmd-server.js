@@ -40,11 +40,11 @@ class BackupServer {
     this.port = port;
     this.bind = bind;
     this.protocol = `http${https ? 's' : ''}`;
-	if (https) {
-		this.http = require('https');
-	} else {
-		this.http = require('http');
-	}
+    if (https) {
+      this.http = require('https');
+    } else {
+      this.http = require('http');
+    }
     this.verbose = verbose;
     this.cert = cert;
     this.running = {};
@@ -67,17 +67,35 @@ class BackupServer {
     });
   }
 
-  registerOp({ type, request, setname, token }) {
+  getOpName({ userid, setname }) {
+    return `${userid||'.'}/${setname}`;
+  }
+
+  registerOp({ type, request, userid, setname, token }) {
+    const running = this.running;
+    const backupId = this.getOpName({ userid, setname });
     const address = request.socket.remoteAddress;
     const port = request.socket.remotePort;
-    const id = `${address}/${setname}`;
-    const running = this.running;
-    const other = running[setname];
+    const id = `${address}/${backupId}`;
+    const other = running[backupId];
     if (other && other.id != id) {
       // other backup/restore running
+      console.error(`${backupId} ${address}:${port} ${id} already exists for ${other.id} ${other.client} ${token}`)
       return { error: 403, type: other.type, id };
     }
-    return running[setname] = { type, client: `${address}:${port}`, id, token };
+    return running[backupId] = { type, client: `${address}:${port}`, id, token };
+  }
+
+  getOp({ userid, setname }) {
+    const running = this.running;
+    const backupId = this.getOpName({ userid, setname });
+    return running[backupId];
+  }
+
+  removeOp({ userid, setname }) {
+    const running = this.running;
+    const backupId = this.getOpName({ userid, setname });
+    delete running[backupId];
   }
 
   // Backup Service
@@ -232,7 +250,7 @@ class BackupServer {
           switch(parts.shift()) {
             case 'create':
               setname = parts.shift();
-              op = this.registerOp({ type: 'backup', request, setname, token });
+              op = this.registerOp({ type: 'backup', request, userid, setname, token });
               if (op.error) {
                 this.writeHead(response, op.error, `${op.type} is already running for ${op.id}`);
                 response.end();
@@ -247,13 +265,13 @@ class BackupServer {
               } catch(e) {
                 console.log(`${(new Date()).toISOString()}: Failed to start for ${setname} by ${op.client}`);
                 console.dir(e);
-                delete running[setname];
+                this.removeOp({ userid, setname });
                 throw e;
               }
               return;
             case 'log':
               setname = parts.shift();
-              op = running[setname];
+              op = this.getOp({ userid, setname });
               if (!op || !op.instance || op.token != token) {
                 this.writeHead(response, 401, 'backup is not running');
                 response.end();
@@ -287,7 +305,7 @@ class BackupServer {
               return;
             case 'finish':
               setname = parts.shift();
-              op = running[setname];
+              op = this.getOp({ userid, setname });
               if (!op || !op.instance || op.token != token) {
                 this.writeHead(response, 401, 'backup is not running');
                 response.end();
@@ -300,25 +318,25 @@ class BackupServer {
             case 'complete':
               setname = parts.shift();
               const when = parts.shift();
-              op = running[setname];
+              op = this.getOp({ userid, setname });
               if (!op || !op.instance || op.token != token) {
                 this.writeHead(response, 401, 'backup is not running');
                 response.end();
               }
               await op.instance.complete(when);
-              delete running[setname];
+              this.removeOp({ userid, setname });
               console.log(`${(new Date()).toISOString()}: Backup complete for ${setname} by ${op.client}`);
               this.writeHead(response, 200, 'backup completed');
               response.end();
               return;
             case 'abandon':
               setname = parts.shift();
-              op = running[setname];
+              op = this.getOp({ userid, setname });
               if (!op || !op.instance || op.token != token) {
                 this.writeHead(response, 401, 'backup is not running');
                 response.end();
               }
-              running[setname] = null;
+              this.removeOp({ userid, setname });
               this.writeHead(response, 200, 'backup abandoned');
               response.end();
               return;

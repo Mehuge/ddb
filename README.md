@@ -373,6 +373,20 @@ Like `--when` but identifies the newest backup for the backup set.
 
 Provided a detailed output of activity and progress.
 
+For a backup, this outputs a status line for each file and folder that is being backed up. The status is a two character string with the following meanings:
+
+The first character indicates the modified status of the file, a (add) u (modified) - (unmodified)
+The second character indicates if the file was added to the backup store. - (not sent) + (sent)
+
+Folders are never sent to the backup store, their details are stored in the log for this backup. Expect to see a-, u- and -- for folders.
+
+Files won't be stored if the files hash appears in the last backup log, or the destination says it already has that hash stored. 
+If a file has changed (modified a or u) the file may not be stored if the destination already has that version of the file. Wxpect to see a-, u-, --, a+, u+
+
+`--terse`
+
+Only show status lines for files actually stored (+) in the backup store.
+
 `--deep-scan`
 
 This option tells the file-scan logic to scan sub-folders of ignored folders. No files in the ignored folder will be backed up, but if the folder contains sub-folders that are not also ignored, they will be backed up.
