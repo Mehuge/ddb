@@ -111,8 +111,21 @@ class BackupServer {
     response.writeHead(code, message, headers);
   }
 
+  expireRunning() {
+    const tokens = server.auth.tokens;
+    Object.keys(this.running).forEach(key => {
+      const backup = this.running[key];
+      if (backup.token && !tokens[backup.token]) {
+        // login has expired for backup
+        fs.unlink(backup.instance._log.getLogName("running"));
+        delete this.running[key];
+      }
+    });
+  }
+
   async handleRequest(request, response) {
     server.auth.expire(900);               // expire logins after 15 mins inactivity
+    this.expireRunning();                  // remove backups for expired logins
     try {
       if (this.verbose) console.log(`${request.method} ${request.url}`);
       const uri = url.parse(request.url, true);
@@ -142,7 +155,7 @@ class BackupServer {
           const address = request.socket.remoteAddress;
           token = authorization[1];
           auth = await server.auth.authenticate({ address, token });
-          userid = auth.login.userid;
+          if (auth) userid = auth.login.userid;
         } else {
           auth = null;
         }
