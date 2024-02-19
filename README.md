@@ -369,6 +369,10 @@ Specifies a timestamp (in ISO format) when listing or verifying a backup. The ti
 
 Like `--when` but identifies the newest backup for the backup set.
 
+`--comment`
+
+Add a comment to the backup log. Comment appears on line 2 of the log prefixed with a #
+
 `--verbose`
 
 Provided a detailed output of activity and progress.
