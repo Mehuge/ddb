@@ -117,6 +117,8 @@ The filesystem is implemented in the `BackupFileSystem` class. The filesystem ha
 
 `hash-v4` is `hash-v3` with compression. I suppose I could have called it `hash-v3-compressed`! As files are stored in the file system gzipped (zlib). As files are copied out of or hashed they are decompressed using gunzip (zlib). This compression is handled inline using streams, so adds very little overhead in terms of performance.
 
+`hash-v5` changes the bucket system to use the more simple, and human readable, first 2 / 2 characters from the hash as the bucket folder names, so for example in v4 we might have `a7/24/aabbccddeeff...` in v5 that becomes `aa/bb/ccddeeff...`. It then becomes easy to take a hash from one of the backup lists and map it to a files.db path by simply adding two / characters, making it easy to manually extract files from the backup.
+
 **Todo:**
 
 - [x] filesystem cleanup (remove files in the file system no longer referenced by any increment)
@@ -135,7 +137,8 @@ The filesystem is implemented in the `BackupFileSystem` class. The filesystem ha
 - [x] networking: add --http and --https options for server mode, default to https if port ends in 443 (443, 4443, 44443)
 - [ ] networking: skip restoring files if local copy hash is the same as the servers hash.
 - [x] a better file system
-- [ ] encryption (backup-filesystem-v5)
+- [x] a simpler file system (use first characters of hash for bucket names) (backup-filesystem-v5)
+- [ ] encryption (backup-filesystem-v6)
 - [x] authentication: backup server should be able to authenticate clients
 - [ ] authentication: allow access-key to be specified via the environment
 - [ ] --move-set move a backup set from one backup destination to another.
@@ -144,7 +147,7 @@ The filesystem is implemented in the `BackupFileSystem` class. The filesystem ha
 - [ ] `ddb cat` like cp but to standard output.
 - [ ] `ddb search` search for a file matching pattern
 - [ ] Make `--fast` the default for local backups. Add `--no-fast` to disable.
-- [ ] Add option to remove a file from a backup set (and all its instances)
+- [ ] Add option to remove a file from a backup set (and all its instances) `ddb rm`
 
 
 

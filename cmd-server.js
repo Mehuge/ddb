@@ -10,7 +10,7 @@ class BackupServer {
 
     // Configure backup from options
     const { destination, verbose } = opts;
-    const target = new BackupTarget({ destination, fast: true, verbose, fstype: 'hash-v4' });
+    const target = new BackupTarget({ destination, fast: true, verbose, fstype: 'hash-v5' });
     await target.connect(true);
 
     const port = opts.port || 4444;
@@ -271,7 +271,7 @@ class BackupServer {
               }
               try {
                 op.instance = new BackupInstance({ target, setname, userid });
-                await op.instance.createNewInstance();
+                await op.instance.createNewInstance({ comment: "server/backup/create" });
                 console.log(`${(new Date()).toISOString()}: New backup started for ${setname} by ${op.client}`);
                 this.writeHead(response, 200, op.id);
                 response.end();
