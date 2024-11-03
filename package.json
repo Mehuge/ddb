@@ -31,6 +31,7 @@
   "devDependencies": {
     "browserify": "^16.2.3",
     "ora": "^6.0.1",
+    "pkg": "^5.8.1",
     "rimraf": "^2.6.2",
     "uglify-js": "^3.14.1"
   }

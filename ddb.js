@@ -16,6 +16,7 @@ async function exec(what, args) {
       case './cmd-clean':   await require('./cmd-clean').exec(args); break;
       case './cmd-server':  await require('./cmd-server').exec(args); break;
       case './cmd-cat':     await require('./cmd-cat').exec(args); break;
+      case './cmd-rm':      await require('./cmd-rm').exec(args); break;
     }
   } catch(e) {
     console.dir(e);
@@ -45,6 +46,9 @@ async function run(args) {
         return;
       case 'cat':
         await exec('./cmd-cat', args);
+        return;
+      case 'rm':
+        await exec('./cmd-rm', args);
         return;
     }
   }
