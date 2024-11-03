@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-const DDB_VERSION = '1.0.0-beta.16';
+const DDB_VERSION = '1.0.0-beta.17';
 
 async function exec(what, args) {
   if (args[0] && args[0].substr(0,2) != '--') {
@@ -15,6 +15,7 @@ async function exec(what, args) {
       case './cmd-restore': await require('./cmd-restore').exec(args); break;
       case './cmd-clean':   await require('./cmd-clean').exec(args); break;
       case './cmd-server':  await require('./cmd-server').exec(args); break;
+      case './cmd-cat':     await require('./cmd-cat').exec(args); break;
     }
   } catch(e) {
     console.dir(e);
@@ -41,6 +42,9 @@ async function run(args) {
         return;
       case 'server':
         await exec('./cmd-server', args);
+        return;
+      case 'cat':
+        await exec('./cmd-cat', args);
         return;
     }
   }
