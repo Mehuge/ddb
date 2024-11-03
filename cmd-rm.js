@@ -7,7 +7,7 @@ class Rm {
     const opts = (new BackupOptions({ when: 'current' })).parse(args);
 
     // Configure backup from options
-    const { fast, fstype, verbose, destination, setname, when, accessKey } = opts;
+    const { fast, fstype, verbose, destination, setname, when, accessKey, dryRun } = opts;
     const target = new BackupTarget({ destination, fast, fstype, verbose , accessKey});
     await target.connect(false);
 
@@ -15,7 +15,7 @@ class Rm {
     accessKey && await target.login();
 
     // Rm
-    await target.rm({ setname, when }, opts.args);
+    await target.rm({ setname, when, verbose, dryRun }, opts.args);
 
     // logout
     accessKey && await target.logout();
