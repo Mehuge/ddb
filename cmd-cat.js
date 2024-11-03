@@ -1,20 +1,20 @@
 const { BackupTarget, BackupOptions } = require('./lib');
 
-class List {
+class Cat {
   static async exec(args) {
 
     // Parse backup options
     const opts = (new BackupOptions()).parse(args);
 
     // Configure backup from options
-    const { fast, fstype, verbose, destination, filter, setname, when, accessKey, userid, since, sources } = opts;
+    const { fast, fstype, verbose, destination, setname, when, accessKey } = opts;
     const target = new BackupTarget({ destination, fast, fstype, verbose , accessKey});
     await target.connect(false);
 
     // login
     accessKey && await target.login();
 
-    // List
+    // Cat
     await target.cat({ setname, when }, opts.args);
 
     // logout
@@ -25,4 +25,4 @@ class List {
   }
 };
 
-module.exports = List;
+module.exports = Cat;
