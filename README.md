@@ -69,14 +69,27 @@ Hashing
 --
 I chose sha256 as the hashing algorithm but the issue with a hash is that there are potentially collisions, though highly unlikely it is a possibility, so I had to build in some integrity checks into the system.
 
-sha256 hashs are 64 hexadecimal characters long. These are stored in a folder called `files.db` within the backup destination. The files are stored in buckets implemented as two levels of directories [00-FF]/[00-FF]. Which bucket a hash is placed into is calculated by splitting the hexadecimal hash into two equal length strings, and calculating the crc8 hash of each, these become the folder names for the bucket.
+sha256 hashs are 64 hexadecimal characters long. These are stored in a folder called `files.db` within the backup destination. The files are stored in buckets implemented as two levels of directories [00-FF]/[00-FF].
 
+The backup store has a version. The current default is hash-v5, though hash-v4 is still supported.
+
+Hash v4
+---
+
+Which bucket a hash is placed into is calculated by splitting the hexadecimal hash into two equal length strings, and calculating the crc8 hash of each, these become the folder names for the bucket. 
 To handle potential hash clashes (two actually different files, with the same hash), by default the
-backup compares a hit in the hash file system byte-by-byte with the source file, and if they are different, will store the file as a variant. These variant numbers are appended to the hash as .0 .1 .2 etc. I have yet to see this happen.
+backup compares a hit in the hash file system byte-by-byte with the source file, and if they are different, will store the file as a variant. These variant numbers are appended to the hash as .0 .1 .2 etc. I have yet to see this happen. 
 
 There is a `--fast` option which skips this additional integrity, and the soon to come client/server version will by default use `--fast`.
 
 In the Future: The `--fast` option will be phased out. I have yet to see a clash, and don't think the byte-by-byte compare is worth it. Perhaps adding a `--slow` option instead.
+
+Hash v5
+---
+
+Which bucket a hash is placed into is determined by the first 4 hex digits from the hash, so aa348c4d... goes in bucket aa/34/aa348c4d...  This has the advantage a human can quickly determine which bucket a file will be in.
+
+The --fast option has no effect in hash-v5, there is no attempt to handle two different files with the same hash, because the odds of it ever happening are miniscule.
 
 Backup Targets
 --
