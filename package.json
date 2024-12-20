@@ -15,7 +15,7 @@
     "build": "npm run clean && npm run bundle && npm run package",
     "clean": "rimraf dist/*",
     "bundle": "browserify --node --exclude supports-color ddb.js | uglifyjs >dist/ddb.js",
-    "package": "pkg -t node10-win-x64,node10-linux-x64,node10-macos-x64 --output dist/ddb ddb.js"
+    "package": "pkg -d -t node10-win-x64,node10-linux-x64,node10-macos-x64 --output dist/ddb ddb.js"
   },
   "author": "austin.france@redskyit.com",
   "license": "ISC",
