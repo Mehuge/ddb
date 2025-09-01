@@ -1,59 +1,52 @@
 #!/usr/bin/env node
 const DDB_VERSION = '1.0.0-beta.18';
 
-async function exec(what, args) {
-  if (args[0] && args[0].substr(0,2) != '--') {
-    // if first argument after command word is not an option,
-    // it is assumed to be a backup destination
-    args = [ '--dest', ...args ];
-  }
-  try {
-  	switch(what) {
-      case './cmd-backup':  await require('./cmd-backup').exec(args); break;
-      case './cmd-verify':  await require('./cmd-verify').exec(args); break;
-      case './cmd-list':    await require('./cmd-list').exec(args); break;
-      case './cmd-restore': await require('./cmd-restore').exec(args); break;
-      case './cmd-clean':   await require('./cmd-clean').exec(args); break;
-      case './cmd-server':  await require('./cmd-server').exec(args); break;
-      case './cmd-cat':     await require('./cmd-cat').exec(args); break;
-      case './cmd-rm':      await require('./cmd-rm').exec(args); break;
-    }
-  } catch(e) {
-    console.dir(e);
-  }
-}
+// A map of command names to their module paths for clarity and easy maintenance.
+const commands = {
+  backup: './cmd-backup',
+  verify: './cmd-verify',
+  list: './cmd-list',
+  restore: './cmd-restore',
+  clean: './cmd-clean',
+  server: './cmd-server',
+  cat: './cmd-cat',
+  rm: './cmd-rm',
+};
+
 async function run(args) {
-  while (args.length) {
-    const arg = args.shift();
-    switch(arg) {
-      case 'backup':
-        await exec('./cmd-backup', args);
-        return;
-      case 'verify':
-        await exec('./cmd-verify', args);
-        return;
-      case 'list':
-        await exec('./cmd-list', args);
-        return;
-      case 'restore':
-        await exec('./cmd-restore', args);
-        return;
-      case 'clean':
-        await exec('./cmd-clean', args);
-        return;
-      case 'server':
-        await exec('./cmd-server', args);
-        return;
-      case 'cat':
-        await exec('./cmd-cat', args);
-        return;
-      case 'rm':
-        await exec('./cmd-rm', args);
-        return;
-    }
+  // The first argument is the command.
+  const command = args.shift();
+
+  if (!command || !commands[command]) {
+    console.error(`Error: Unknown command "${command}".`);
+    console.error(`Available commands: ${Object.keys(commands).join(', ')}`);
+    process.exit(1);
+  }
+
+  // Handle the shorthand for backup destination.
+  if (args[0] && !args[0].startsWith('--')) {
+    args.unshift('--dest');
+  }
+
+  try {
+    const commandModule = require(commands[command]);
+    await commandModule.exec(args);
+  } catch (e) {
+    // Provide more user-friendly error output.
+    console.error(`An error occurred while running the "${command}" command:`);
+    console.error(e.message);
+    process.exit(1);
   }
 }
 
 (async () => {
-  await run(process.argv);
+  // Use slice(2) to ignore 'node' and the script path.
+  const args = process.argv.slice(2);
+  if (args.length === 0) {
+      console.log(`ddb version ${DDB_VERSION}`);
+      console.log('Usage: ddb <command> [options]');
+      console.log(`Available commands: ${Object.keys(commands).join(', ')}`);
+      return;
+  }
+  await run(args);
 })();
