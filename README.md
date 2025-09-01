@@ -87,7 +87,7 @@ In the Future: The `--fast` option will be phased out. I have yet to see a clash
 Hash v5
 ---
 
-Which bucket a hash is placed into is determined by the first 4 hex digits from the hash, so aa348c4d... goes in bucket aa/34/aa348c4d...  This has the advantage a human can quickly determine which bucket a file will be in.
+Which bucket a hash is placed into is determined by the first 4 hex digits from the hash, so aa348c4d... becomes aa/34/8c4d...  This has the advantage a human can quickly determine which bucket a file will be in.
 
 The --fast option has no effect in hash-v5, there is no attempt to handle two different files with the same hash, because the odds of it ever happening are miniscule.
 
