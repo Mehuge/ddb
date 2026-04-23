@@ -11,6 +11,7 @@
   },
   "main": "ddb.js",
   "scripts": {
+    "prebuild": "node -e \"require('./lib/fs').mkdirp('dist')\"",
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "npm run clean && npm run bundle && npm run package",
     "clean": "rimraf dist/*",
