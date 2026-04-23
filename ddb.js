@@ -3,14 +3,14 @@ const DDB_VERSION = '1.0.0-beta.18';
 
 // A map of command names to their module paths for clarity and easy maintenance.
 const commands = {
-  backup: './cmd-backup',
-  verify: './cmd-verify',
-  list: './cmd-list',
-  restore: './cmd-restore',
-  clean: './cmd-clean',
-  server: './cmd-server',
-  cat: './cmd-cat',
-  rm: './cmd-rm',
+  backup: () => require('./cmd-backup'),
+  verify: () => require('./cmd-verify'),
+  list:   () => require('./cmd-list'),
+  restore:() => require('./cmd-restore'),
+  clean:  () => require('./cmd-clean'),
+  server: () => require('./cmd-server'),
+  cat:    () => require('./cmd-cat'),
+  rm:     () => require('./cmd-rm'),
 };
 
 async function run(args) {
@@ -29,7 +29,7 @@ async function run(args) {
   }
 
   try {
-    const commandModule = require(commands[command]);
+    const commandModule = commands[command]();
     await commandModule.exec(args);
   } catch (e) {
     // Provide more user-friendly error output.
