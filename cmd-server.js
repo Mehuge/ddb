@@ -178,7 +178,7 @@ class BackupServer {
             case 'put':
               hash = parts.shift();
               size = parts.shift();
-              await target.fs().put(request, size, hash, { compressed: true });
+              await target.fs().put(request, size, hash, { isAlreadyCompressed: true });
               this.writeHead(response, 200, 'OK');
               response.end();
               return;
