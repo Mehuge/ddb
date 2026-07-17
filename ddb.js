@@ -1,27 +1,32 @@
 #!/usr/bin/env node
-const DDB_VERSION = '1.0.0-beta.18';
+const DDB_VERSION = '1.0.0-beta.19';
 
-// A map of command names to their module paths for clarity and easy maintenance.
-const commands = {
-  backup: './cmd-backup',
-  verify: './cmd-verify',
-  list: './cmd-list',
-  restore: './cmd-restore',
-  clean: './cmd-clean',
-  server: './cmd-server',
-  cat: './cmd-cat',
-  rm: './cmd-rm',
-};
+function requireCommand(command) {
+  switch(command) {
+    case 'backup':
+      return require('./cmd-backup');
+    case 'verify':
+      return require('./cmd-verify');
+    case 'list':
+      return require('./cmd-list');
+    case 'restore':
+      return require('./cmd-restore');
+    case 'clean':
+      return require('./cmd-clean');
+    case 'server':
+      return require('./cmd-server');
+    case 'cat':
+      return require('./cmd-cat');
+    case 'rm':
+      return require('./cmd-rm');
+    default:
+      throw new Error(`Unknown command: ${command}`);
+  }
+}
 
 async function run(args) {
   // The first argument is the command.
   const command = args.shift();
-
-  if (!command || !commands[command]) {
-    console.error(`Error: Unknown command "${command}".`);
-    console.error(`Available commands: ${Object.keys(commands).join(', ')}`);
-    process.exit(1);
-  }
 
   // Handle the shorthand for backup destination.
   if (args[0] && !args[0].startsWith('--')) {
@@ -29,7 +34,7 @@ async function run(args) {
   }
 
   try {
-    const commandModule = require(commands[command]);
+    const commandModule = requireCommand(command);
     await commandModule.exec(args);
   } catch (e) {
     // Provide more user-friendly error output.
@@ -45,7 +50,6 @@ async function run(args) {
   if (args.length === 0) {
       console.log(`ddb version ${DDB_VERSION}`);
       console.log('Usage: ddb <command> [options]');
-      console.log(`Available commands: ${Object.keys(commands).join(', ')}`);
       return;
   }
   await run(args);
