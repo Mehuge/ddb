@@ -1,28 +1,17 @@
 #!/usr/bin/env node
 const DDB_VERSION = '1.0.0-beta.19';
 
-function requireCommand(command) {
-  switch(command) {
-    case 'backup':
-      return require('./cmd-backup');
-    case 'verify':
-      return require('./cmd-verify');
-    case 'list':
-      return require('./cmd-list');
-    case 'restore':
-      return require('./cmd-restore');
-    case 'clean':
-      return require('./cmd-clean');
-    case 'server':
-      return require('./cmd-server');
-    case 'cat':
-      return require('./cmd-cat');
-    case 'rm':
-      return require('./cmd-rm');
-    default:
-      throw new Error(`Unknown command: ${command}`);
-  }
-}
+// A map of command names to their module paths for clarity and easy maintenance.
+const commands = {
+  backup: () => require('./cmd-backup'),
+  verify: () => require('./cmd-verify'),
+  list:   () => require('./cmd-list'),
+  restore:() => require('./cmd-restore'),
+  clean:  () => require('./cmd-clean'),
+  server: () => require('./cmd-server'),
+  cat:    () => require('./cmd-cat'),
+  rm:     () => require('./cmd-rm'),
+};
 
 async function run(args) {
   // The first argument is the command.
@@ -34,7 +23,7 @@ async function run(args) {
   }
 
   try {
-    const commandModule = requireCommand(command);
+    const commandModule = commands[command]();
     await commandModule.exec(args);
   } catch (e) {
     // Provide more user-friendly error output.

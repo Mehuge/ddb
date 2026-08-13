@@ -11,6 +11,7 @@
   },
   "main": "ddb.js",
   "scripts": {
+    "prebuild": "node -e \"require('./lib/fs').mkdirp('dist')\"",
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "npm run clean && npm run bundle && npm run package",
     "clean": "rimraf dist/*",
@@ -23,7 +24,6 @@
     "crc": "^3.8.0",
     "filecompare": "^1.0.4",
     "ignore": "^5.0.5",
-    "ip": "^1.1.5",
     "pump": "^3.0.0",
     "sha256-file": "^1.0.0",
     "stream-equal": "^1.1.1"
