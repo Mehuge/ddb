@@ -393,8 +393,8 @@ class BackupServer {
       this.writeHead(response, 400); // Bad Request
       response.end();
     } catch(e) {
+      // response.writeHead(503, e.toString());
       console.error(`503 ${e.toString()}`);
-      response.writeHead(503, e.toString());
       response.end();
     }
   }
