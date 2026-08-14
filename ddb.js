@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-const DDB_VERSION = '1.0.0-beta.19';
+const DDB_VERSION = '1.0.0-beta.20';
 
 // A map of command names to their module paths for clarity and easy maintenance.
 const commands = {
