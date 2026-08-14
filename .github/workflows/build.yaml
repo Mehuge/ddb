@@ -12,10 +12,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@4bc0570501b0f61d2d38622c2299d6387034b7f3 # v2.1.1
         with:
           bun-version: latest
 
@@ -38,7 +38,7 @@ jobs:
           bun build ddb.js --compile --target=bun-darwin-x64 --outfile dist/ddb-macos-x64
 
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@4aec534e0cbc6142effbc31d27522d4f2ccf152d # v4.6.0
         with:
           name: standalone-executables
           path: dist/*
