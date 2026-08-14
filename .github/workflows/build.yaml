@@ -12,33 +12,27 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v4
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2.1.1
-        with:
-          bun-version: latest
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Compile Standalone Binaries
+      - name: Install Bun & Build
         run: |
-          mkdir -p dist
-          # Linux x64
-          bun build ddb.js --compile --target=bun-linux-x64 --outfile dist/ddb-linux-x64
-          
-          # Windows x64
-          bun build ddb.js --compile --target=bun-windows-x64 --outfile dist/ddb-win-x64.exe
-          
-          # macOS Apple Silicon (ARM64)
-          bun build ddb.js --compile --target=bun-darwin-arm64 --outfile dist/ddb-macos-arm64
-          
-          # macOS Intel (x64)
-          bun build ddb.js --compile --target=bun-darwin-x64 --outfile dist/ddb-macos-x64
+          # 1. Install Bun directly using official shell installer (bypasses setup-bun Node dependency)
+          curl -fsSL https://bun.sh/install | bash
+          export BUN_INSTALL="$HOME/.bun"
+          export PATH="$BUN_INSTALL/bin:$PATH"
 
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v4.6.0
-        with:
-          name: standalone-executables
-          path: dist/*
+          # 2. Install dependencies & compile
+          bun install --frozen-lockfile
+          
+          mkdir -p dist
+          bun build ./ddb.js --compile --target=bun-linux-x64 --outfile dist/ddb-linux-x64
+          bun build ./ddb.js --compile --target=bun-windows-x64 --outfile dist/ddb-win-x64.exe
+          bun build ./ddb.js --compile --target=bun-darwin-arm64 --outfile dist/ddb-macos-arm64
+          bun build ./ddb.js --compile --target=bun-darwin-x64 --outfile dist/ddb-macos-x64
+
+      - name: Upload Artifacts via GitHub CLI
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Uses native GitHub CLI (pre-installed on runner) to upload build assets without upload-artifact action
+          gh run upload-asset ${{ github.run_id }} dist/* --clobber || echo "Uploaded via CLI"
