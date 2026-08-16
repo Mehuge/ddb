@@ -1,7 +1,8 @@
 node_modules
-test.*
 auth.json
 dist
 *.pem
+temp
 
 \.vscode/launch\.json
+\.vscode/settings\.json

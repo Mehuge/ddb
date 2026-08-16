@@ -1,6 +1,6 @@
 {
   "name": "dd-backup",
-  "version": "1.0.0-beta.11",
+  "version": "1.0.0-beta.21",
   "description": "de-duplicating backup",
   "repository": {
     "type": "git",
@@ -11,11 +11,19 @@
   },
   "main": "ddb.js",
   "scripts": {
+    "prebuild": "node -e \"require('./lib/fs').mkdirp('dist')\"",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "npm run clean && npm run bundle && npm run package",
+    "build": "npm run clean && npm run bundle && npm run build:all",
     "clean": "rimraf dist/*",
-    "bundle": "browserify --node --exclude supports-color ddb.js | uglifyjs >dist/ddb.js",
-    "package": "pkg -t node10-win-x64,node10-linux-x64,node10-macos-x64 --output dist/ddb ddb.js"
+    "build:win": "bun build ./dist/ddb.js --compile --target=bun-windows-x64 --outfile dist/ddb-win.exe",
+    "build:linux": "bun build ./dist/ddb.js --compile --target=bun-linux-x64 --outfile dist/ddb-linux",
+    "build:mac": "bun build ./dist/ddb.js --compile --target=bun-darwin-arm64 --outfile dist/ddb-macos",
+    "build:all": "npm run build:win && npm run build:linux && npm run build:mac",
+    "bundle": "esbuild ddb.js --bundle --platform=node --target=node10 --outfile=dist/ddb.js",
+    "test:local": "cd tests && cmd /c .\\test.local.cmd",
+    "test:remote": "cd tests && cmd /c .\\test.remote.cmd",
+    "test:server": "cd tests && cmd /c .\\test.server.cmd",
+    "test:client": "npm run test:local && npm run test:remote"
   },
   "author": "austin.france@redskyit.com",
   "license": "ISC",
@@ -23,13 +31,12 @@
     "crc": "^3.8.0",
     "filecompare": "^1.0.4",
     "ignore": "^5.0.5",
-    "ip": "^1.1.5",
     "pump": "^3.0.0",
     "sha256-file": "^1.0.0",
     "stream-equal": "^1.1.1"
   },
   "devDependencies": {
-    "browserify": "^16.2.3",
+    "esbuild": "^0.28.2",
     "ora": "^6.0.1",
     "rimraf": "^2.6.2",
     "uglify-js": "^3.14.1"
