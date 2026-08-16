@@ -14,8 +14,13 @@ rem restore backup to a new location
 node --inspect=9222 ../ddb.js restore %DEST% --set-name test5 --verbose --output=c:\temp\ddb-backup-local-restore
 
 rem verify the restored backup
-rem is this correct?
-node --inspect=9222 ../ddb.js verify c:\temp\ddb-backup-local --set-name test5 --verbose --compare --compare-with=c:\temp\ddb-backup-local-restore
+node --inspect=9222 ../ddb.js verify c:\temp\ddb-backup-local --set-name test5 --verbose --compare-with=c:\temp\ddb-backup-local-restore
+
+rem make sure verify finds a difference when we modify a file in the restored backup
+rem should report two files that differ: README.md and tests/test.local.cmd
+echo "This is a test modification" >> c:\temp\ddb-backup-local-restore\README.md
+del /F c:\temp\ddb-backup-local-restore\tests\test.local.cmd
+node --inspect=9222 ../ddb.js verify c:\temp\ddb-backup-local --set-name test5 --verbose --compare-with=c:\temp\ddb-backup-local-restore
 
 rem this is a test to verify built executable works as expected
 ..\dist\ddb-win.exe verify %DEST% --verbose
