@@ -1,10 +1,23 @@
 set DEST=c:\temp\ddb-backup-local
 rmdir /S/Q %DEST%
+
+rem test backup
 node --inspect=9222 ../ddb.js backup %DEST% --set-name=test5 --verbose --source=.. --exclude node_modules --exclude dist --exclude .git
-node --inspect=9222 ../ddb.js verify %DEST% --verbose
+
+rem test verify backup
 node --inspect=9222 ../ddb.js verify %DEST% --set-name test5 --verbose 
+
+rem test verfy of backup destination (all backup instances)
+node --inspect=9222 ../ddb.js verify %DEST% --verbose
+
+rem restore backup to a new location
 node --inspect=9222 ../ddb.js restore %DEST% --set-name test5 --verbose --output=c:\temp\ddb-backup-local-restore
-rem this is a test to verify that the backup restored correctly
+
+rem verify the restored backup
+rem is this correct?
+node --inspect=9222 ../ddb.js verify c:\temp\ddb-backup-local --set-name test5 --verbose --compare --compare-with=c:\temp\ddb-backup-local-restore
+
+rem this is a test to verify built executable works as expected
 ..\dist\ddb-win.exe verify %DEST% --verbose
 
 rem -----------------------------------------------------------------------
