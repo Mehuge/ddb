@@ -53,3 +53,17 @@ node ../ddb.js rm %DEST% --set-name test5 --dry-run TODO.md
 
 rem clean
 node --inspect ../ddb.js clean %DEST% --verbose
+
+rem ------------------------------------------------------------------------
+rem test backup with a poisoned file to verify that hash mismatch is detected
+rem ------------------------------------------------------------------------
+
+rem poison the well
+copy poisoned-apple.fruit.gz c:\temp\ddb-backup-local\files.db\69\bb\57b00a3ca55cb353e3337ef511c77e49cbb232384939eb5d71b6c631bd82.16
+
+rem try and restore from the poisoned well, should fail with hash mismatch error
+rmdir /S/Q c:\temp\ddb-backup-local-restore-2
+node --inspect=9222 ../ddb.js restore %DEST% --set-name test5 --verbose --output=c:\temp\ddb-backup-local-restore-2
+
+rem verify the restored backup, should fail with hash mismatch error
+node --inspect=9222 ../ddb.js verify %DEST% --verbose
