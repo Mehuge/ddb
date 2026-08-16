@@ -5,3 +5,4 @@ dist
 temp
 
 \.vscode/launch\.json
+\.vscode/settings\.json
