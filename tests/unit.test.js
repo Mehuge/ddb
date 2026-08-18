@@ -23,6 +23,7 @@ describe('Filter', () => {
     it('returns truthy for an exact-name exclude', () => {
       const f = new Filter({ filters: ['-node_modules'] });
       assert.ok(f.ignores('node_modules'));
+      assert.ok(f.ignores('a/node_modules'));
     });
 
     it('excludes using ** glob', () => {
@@ -58,6 +59,15 @@ describe('Filter', () => {
       assert.ok(!f.ignores('a/b/c/.gitignore'));
     });
 
+    it('no prefix matches at any depth', () => {
+      const f = new Filter({ filters: ['-.git'] });
+      assert.ok(f.ignores('.git'));
+      assert.ok(f.ignores('sub/.git'));
+      assert.ok(f.ignores('a/b/c/.git'));
+      assert.ok(!f.ignores('.gitignore'));
+      assert.ok(!f.ignores('a/b/c/.gitignore'));
+    });
+
     it('**/ prefix with glob', () => {
       const f = new Filter({ filters: ['-**/.git*'] });
       assert.ok(f.ignores('.git'));
@@ -65,6 +75,15 @@ describe('Filter', () => {
       assert.ok(f.ignores('a/b/c/.git'));
       assert.ok(f.ignores('.gitignore'));
       assert.ok(f.ignores('a/b/c/.gitignore'));
+    });
+
+    it('no prefix with glob', () => {
+      const f = new Filter({ filters: ['-*.log'] });
+      assert.ok(f.ignores('app.log'));
+      assert.ok(f.ignores('sub/app.log'));
+      assert.ok(f.ignores('a/b/c/app.log'));
+      assert.ok(!f.ignores('a.txt'));
+      assert.ok(!f.ignores('sub/a.txt'));
     });
 
     it('directory exclude does not match longer names with same prefix', () => {
