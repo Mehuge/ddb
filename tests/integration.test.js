@@ -294,6 +294,17 @@ describe('backup filters', () => {
     const r = runDdb(['list', dest, '--set-name=nologs', '--when=current', '--verbose']);
     assert.ok(!r.stdout.includes('app.log'), 'log file should be excluded');
   });
+
+  it('global --exclude before --source is applied to the backup', () => {
+    // --exclude appears BEFORE --source — this exercises the global filter merge fix
+    runDdb(['backup', dest, '--set-name=global-filter',
+      '--exclude', 'node_modules', '--exclude', 'dist',
+      `--source=${src}`]);
+    const r = runDdb(['list', dest, '--set-name=global-filter', '--when=current', '--verbose']);
+    assert.ok(!r.stdout.includes('lodash'),    'node_modules should be excluded by global filter');
+    assert.ok(!r.stdout.includes('bundle.js'), 'dist should be excluded by global filter');
+    assert.ok(r.stdout.includes('index.js'),   'src/index.js should still be included');
+  });
 });
 
 // ---------------------------------------------------------------------------

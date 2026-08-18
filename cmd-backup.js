@@ -31,7 +31,7 @@ class Backup {
       sources: backup && sources.map
         (source => new BackupSource({
           src: source.src,
-          filters: source.filters,
+          filters: [...opts.filter.filters, ...source.filters],
           subdirs: source.subdirs,
           verbose,
           terse,
