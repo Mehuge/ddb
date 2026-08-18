@@ -22,7 +22,7 @@
     "build:linux": "bun build ./dist/ddb.js --compile --target=bun-linux-x64 --outfile dist/ddb-linux",
     "build:mac": "bun build ./dist/ddb.js --compile --target=bun-darwin-arm64 --outfile dist/ddb-macos",
     "build:all": "npm run build:win && npm run build:linux && npm run build:mac",
-    "bundle": "esbuild ddb.js --bundle --platform=node --target=node10 --outfile=dist/ddb.js",
+    "bundle": "esbuild ddb.js --bundle --platform=node --target=node10 --minify --outfile=dist/ddb.js",
     "test:local": "cd tests && cmd /c .\\test.local.cmd",
     "test:remote": "cd tests && cmd /c .\\test.remote.cmd",
     "test:server": "cd tests && cmd /c .\\test.server.cmd",
@@ -41,7 +41,6 @@
   "devDependencies": {
     "esbuild": "^0.28.2",
     "ora": "^6.0.1",
-    "rimraf": "^2.6.2",
-    "uglify-js": "^3.14.1"
+    "rimraf": "^2.6.2"
   }
 }
