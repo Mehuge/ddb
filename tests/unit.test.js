@@ -54,6 +54,35 @@ describe('Filter', () => {
       assert.ok(f.ignores('.git'));
       assert.ok(f.ignores('sub/.git'));
       assert.ok(f.ignores('a/b/c/.git'));
+      assert.ok(!f.ignores('.gitignore'));
+      assert.ok(!f.ignores('a/b/c/.gitignore'));
+    });
+
+    it('**/ prefix with glob', () => {
+      const f = new Filter({ filters: ['-**/.git*'] });
+      assert.ok(f.ignores('.git'));
+      assert.ok(f.ignores('sub/.git'));
+      assert.ok(f.ignores('a/b/c/.git'));
+      assert.ok(f.ignores('.gitignore'));
+      assert.ok(f.ignores('a/b/c/.gitignore'));
+    });
+
+    it('directory exclude does not match longer names with same prefix', () => {
+      const f = new Filter({ filters: ['-**/temp'] });
+      assert.ok(f.ignores('temp'),              'exact dir entry');
+      assert.ok(f.ignores('temp/foo.txt'),      'file inside temp');
+      assert.ok(f.ignores('a/b/temp'),          'nested dir entry');
+      assert.ok(f.ignores('a/b/temp/foo.txt'),  'file inside nested temp');
+      assert.ok(!f.ignores('templates'),        'should NOT exclude templates');
+      assert.ok(!f.ignores('templates/x.html'), 'should NOT exclude inside templates');
+      assert.ok(!f.ignores('a/templates'),      'should NOT exclude nested templates');
+    });
+
+    it('directory exclude without ** also uses boundary', () => {
+      const f = new Filter({ filters: ['-temp'] });
+      assert.ok(f.ignores('temp'));
+      assert.ok(f.ignores('temp/foo.txt'));
+      assert.ok(!f.ignores('templates'));
     });
 
     it('empty filter list ignores nothing', () => {
@@ -66,12 +95,10 @@ describe('Filter', () => {
         "-**/.vs",
         "-**/.svn",
         "-**/.git",
-        "+**/.gitignore",
         "-**/logs",
         "-**/Debug",
         "-**/Release",
         "-**/temp",
-        "+**/templates",
         "-**/node_modules",
         "-**/dist",
         "-**/obj",
