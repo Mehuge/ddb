@@ -60,6 +60,40 @@ describe('Filter', () => {
       const f = new Filter({ filters: [] });
       assert.ok(!f.ignores('anything'));
     });
+
+    it('filters reset in middle of list by -** (ignore all)', () => {
+      const f = new Filter({ filters: [
+        "-**/.vs",
+        "-**/.svn",
+        "-**/.git",
+        "+**/.gitignore",
+        "-**/logs",
+        "-**/Debug",
+        "-**/Release",
+        "-**/temp",
+        "+**/templates",
+        "-**/node_modules",
+        "-**/dist",
+        "-**/obj",
+        "-**/bin/Release",
+        "-**/bin/Debug",
+        // filter is effectively reset here, everything is ignored except for the following explicitly included 
+        "-**",
+        "+Desktop",
+        "+Documents" 
+      ]});
+      assert.ok(f.ignores('.git'));
+      assert.ok(f.ignores('.gitignore'));
+      assert.ok(f.ignores('logs/app.log'));
+      assert.ok(f.ignores('src/node_modules/package.json'));
+      assert.ok(f.ignores('templates/index.html'));
+      assert.ok(!f.ignores('Desktop'));
+      assert.ok(!f.ignores('Desktop/file.txt'));
+      assert.ok(!f.ignores('Documents'));
+      assert.ok(!f.ignores('Documents/file.txt'));
+      assert.ok(f.ignores('.android'));
+      assert.ok(f.ignores('.android/config'));
+    });
   });
 });
 
