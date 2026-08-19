@@ -3,6 +3,7 @@ auth.json
 dist
 *.pem
 temp
+.ddb.json
 
 \.vscode/launch\.json
 \.vscode/settings\.json

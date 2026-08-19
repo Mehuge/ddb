@@ -1,5 +1,7 @@
 const { BackupTarget, BackupSource, BackupSet, BackupOptions } = require('./lib');
 const { memstats } = require('./lib/debug');
+const fs = require('./lib/fs');
+const path = require('path');
 
 class Backup {
   static async exec(args) {
@@ -9,6 +11,7 @@ class Backup {
       setname: 'default',
       sources: [],
       backup: true,
+      config: await BackupOptions.loadConfig("backup"),
     })).parse(args);
 
     // Configure backup from options
