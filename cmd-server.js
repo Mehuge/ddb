@@ -1,8 +1,65 @@
 const { BackupInstance, BackupOptions, BackupTarget, BackupLog } = require('./lib');
 const url = require('url');
 const path = require('path');
+const { PassThrough } = require('stream');
 const server = require('./lib/server');
 const fs = require('./lib/fs');
+
+// Reads exactly n bytes from the HTTP request stream, accumulating chunks as they arrive.
+class BufferedReader {
+  constructor(stream) {
+    this._chunks = [];
+    this._len = 0;
+    this._ended = false;
+    this._resolve = null;
+    this._reject = null;
+    this._need = 0;
+    stream.on('data', chunk => {
+      this._chunks.push(chunk);
+      this._len += chunk.length;
+      if (this._resolve && this._len >= this._need) {
+        const r = this._resolve; this._resolve = null; this._reject = null;
+        r();
+      }
+    });
+    stream.on('end', () => {
+      this._ended = true;
+      if (this._resolve) { const r = this._resolve; this._resolve = null; this._reject = null; r(); }
+    });
+    stream.on('close', () => {
+      if (!this._ended) {
+        this._ended = true;
+        if (this._resolve) { const r = this._resolve; this._resolve = null; this._reject = null; r(); }
+      }
+    });
+    stream.on('error', err => {
+      if (this._reject) { const r = this._reject; this._resolve = null; this._reject = null; r(err); }
+    });
+  }
+
+  async readBytes(n) {
+    while (this._len < n) {
+      if (this._ended) return null;
+      await new Promise((resolve, reject) => {
+        this._need = n; this._resolve = resolve; this._reject = reject;
+      });
+    }
+    const result = Buffer.allocUnsafe(n);
+    let off = 0;
+    while (off < n) {
+      const c = this._chunks[0];
+      const take = Math.min(n - off, c.length);
+      c.copy(result, off, 0, take);
+      off += take;
+      this._len -= take;
+      if (take === c.length) this._chunks.shift();
+      else this._chunks[0] = c.slice(take);
+    }
+    return result;
+  }
+
+  done() { return this._ended && this._len === 0; }
+}
 
 class BackupServer {
   static async exec(args) {
@@ -316,6 +373,100 @@ class BackupServer {
               this.writeHead(response, 401, 'invalid request, no body');
               response.end();
               return;
+            case 'batch-has':
+              setname = parts.shift();
+              op = this.getOp({ userid, setname });
+              if (!op || !op.instance || op.token != token) {
+                this.writeHead(response, 401, 'backup is not running');
+                response.end();
+                return;
+              }
+              body = await BackupServer.getRequestBody(request);
+              if (body) {
+                const checks = JSON.parse(body);
+                const results = [];
+                for (const { hash, size } of checks) {
+                  results.push(await target.fs().has(''+size, hash, 0));
+                }
+                if (this.verbose) {
+                  const have = results.filter(Boolean).length;
+                  console.log(`has-check ${setname} (${op.client}): ${checks.length} files, ${have} already stored`);
+                }
+                this.writeHead(response, 200, 'OK', { 'Content-Type': 'application/json' });
+                response.end(JSON.stringify(results));
+                return;
+              }
+              this.writeHead(response, 400, 'missing body');
+              response.end();
+              return;
+            case 'batch':
+              setname = parts.shift();
+              op = this.getOp({ userid, setname });
+              if (!op || !op.instance || op.token != token) {
+                this.writeHead(response, 401, 'backup is not running');
+                response.end();
+                return;
+              }
+              {
+                const fileResults = [];
+                const reader = new BufferedReader(request);
+                let logCount = 0, storedCount = 0, skippedCount = 0;
+                while (!reader.done()) {
+                  const typeBuf = await reader.readBytes(1);
+                  if (!typeBuf) break;
+                  const frameType = String.fromCharCode(typeBuf[0]);
+                  const lenBuf = await reader.readBytes(4);
+                  if (!lenBuf) break;
+                  const headerLen = lenBuf.readUInt32BE(0);
+                  const headerBuf = await reader.readBytes(headerLen);
+                  if (!headerBuf) break;
+                  const header = JSON.parse(headerBuf.toString());
+                  if (frameType === 'L') {
+                    logCount++;
+                    if (header.type === 'source') {
+                      if (this.verbose) console.log(`batch source ${header.root}`);
+                      await op.instance.log().writeSourceEntry({ root: header.root });
+                    } else if (header.type === 'log') {
+                      const entry = header.entry;
+                      if (this.verbose) console.log(`batch log ${BackupLog.entryToString(entry)}`);
+                      await op.instance.log().writeEntry(
+                        Object.assign(entry, { ctime: new Date(entry.ctime), mtime: new Date(entry.mtime) })
+                      );
+                    }
+                  } else if (frameType === 'F') {
+                    const { hash, size } = header;
+                    // Feed size-prefixed chunks into a PassThrough; storeCompressedStream
+                    // drains the stream even when the file already exists.
+                    const pass = new PassThrough();
+                    const storePromise = target.fs().storeCompressedStream(pass, hash, size);
+                    // If storage fails, destroy pass so any pending drain await throws rather than hanging
+                    storePromise.catch(err => pass.destroy(err));
+                    let chunkLenBuf;
+                    while ((chunkLenBuf = await reader.readBytes(4))) {
+                      const chunkLen = chunkLenBuf.readUInt32BE(0);
+                      if (chunkLen === 0) break;
+                      const chunk = await reader.readBytes(chunkLen);
+                      if (!chunk) break;
+                      if (!pass.write(chunk)) {
+                        await new Promise((resolve, reject) => {
+                          const onDrain = () => { pass.off('error', reject); resolve(); };
+                          pass.once('drain', onDrain);
+                          pass.once('error', (err) => { pass.off('drain', onDrain); reject(err); });
+                        });
+                      }
+                    }
+                    pass.end();
+                    const result = await storePromise;
+                    if (this.verbose) console.log(`F ${result.stored ? '+' : '='} ${hash} ${size}`);
+                    result.stored ? storedCount++ : skippedCount++;
+                    fileResults.push(result);
+                  }
+                }
+                console.log(`${new Date().toISOString()}: batch ${setname} (${op.client}): ${logCount} log entries, ${storedCount} files stored, ${skippedCount} files skipped`);
+                this.writeHead(response, 200, 'OK', { 'Content-Type': 'application/json' });
+                response.end(JSON.stringify(fileResults));
+                return;
+              }
             case 'finish':
               setname = parts.shift();
               op = this.getOp({ userid, setname });
