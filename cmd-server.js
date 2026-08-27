@@ -14,27 +14,24 @@ class BufferedReader {
     this._resolve = null;
     this._reject = null;
     this._need = 0;
-    stream.on('data', chunk => {
-      this._chunks.push(chunk);
-      this._len += chunk.length;
-      if (this._resolve && this._len >= this._need) {
-        const r = this._resolve; this._resolve = null; this._reject = null;
-        r();
+    // Use async iteration — more portable than 'data' events across runtimes (e.g. Bun)
+    ;(async () => {
+      try {
+        for await (const chunk of stream) {
+          this._chunks.push(chunk);
+          this._len += chunk.length;
+          if (this._resolve && this._len >= this._need) {
+            const r = this._resolve; this._resolve = null; this._reject = null;
+            r();
+          }
+        }
+      } catch(err) {
+        if (this._reject) { const r = this._reject; this._resolve = null; this._reject = null; r(err); }
+        return;
       }
-    });
-    stream.on('end', () => {
       this._ended = true;
       if (this._resolve) { const r = this._resolve; this._resolve = null; this._reject = null; r(); }
-    });
-    stream.on('close', () => {
-      if (!this._ended) {
-        this._ended = true;
-        if (this._resolve) { const r = this._resolve; this._resolve = null; this._reject = null; r(); }
-      }
-    });
-    stream.on('error', err => {
-      if (this._reject) { const r = this._reject; this._resolve = null; this._reject = null; r(err); }
-    });
+    })();
   }
 
   async readBytes(n) {
