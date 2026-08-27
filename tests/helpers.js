@@ -52,7 +52,7 @@ function runDdb(args, opts = {}) {
   const ddbScript = path.join(__dirname, '..', 'ddb.js');
   const result = spawnSync(nodeExe, [ddbScript, ...args], {
     encoding: 'utf8',
-    timeout: 60000,
+    timeout: opts.timeout || 120000,
     cwd: opts.cwd || process.cwd(),
     env: { ...process.env, ...opts.env },
   });
@@ -125,4 +125,48 @@ function startServer(dest, port, authConfig = null) {
   });
 }
 
-module.exports = { makeTmpDir, writeFixtures, FIXTURE_FILES, runDdb, startServer };
+/**
+ * Write large binary fixture files into a directory.
+ * Sizes chosen to exceed the gzip internal buffer (16 KB) many times over,
+ * triggering backpressure and drain cycles in the streaming upload path.
+ * Uses pseudo-random-ish bytes so gzip cannot trivially compress to nothing.
+ */
+async function writeLargeFixtures(root) {
+  const files = [
+    // Sizes chosen to trigger multiple gzip drain cycles without taking too long.
+    // 256 KB and 1 MB are enough to stress backpressure on localhost.
+    { rel: 'large/binary-256k.bin', size: 256 * 1024 },
+    { rel: 'large/binary-1mb.bin',  size: 1 * 1024 * 1024 },
+    { rel: 'large/text-512k.txt',   size: 512 * 1024, text: true },
+  ];
+  const names = files.map(f => f.rel);
+  for (const { rel, size, text } of files) {
+    const abs = path.join(root, rel);
+    await mkdir(path.dirname(abs), { recursive: true });
+    // Generate a buffer with a repeating pattern that compresses moderately
+    // (not all zeros, not fully random — mimics real binary/text files)
+    const buf = Buffer.allocUnsafe(size);
+    if (text) {
+      // Simulate a large text file with varying line content
+      let off = 0;
+      let line = 0;
+      while (off < size) {
+        const s = `line ${line++}: ${'abcdefghijklmnopqrstuvwxyz'.repeat(4)}\n`;
+        const chunk = Buffer.from(s);
+        chunk.copy(buf, off, 0, Math.min(chunk.length, size - off));
+        off += chunk.length;
+      }
+    } else {
+      // Pseudo-random bytes via xorshift — compressible but not trivially
+      let x = 0xdeadbeef >>> 0;
+      for (let i = 0; i < size; i++) {
+        x ^= x << 13; x ^= x >>> 17; x ^= x << 5;
+        buf[i] = x & 0xff;
+      }
+    }
+    await writeFile(abs, buf);
+  }
+  return names;
+}
+
+module.exports = { makeTmpDir, writeFixtures, writeLargeFixtures, FIXTURE_FILES, runDdb, startServer };

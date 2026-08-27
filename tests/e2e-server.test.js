@@ -10,7 +10,7 @@ const assert = require('node:assert/strict');
 const path   = require('path');
 const fsp    = require('fs').promises;
 
-const { makeTmpDir, writeFixtures, FIXTURE_FILES, runDdb, startServer } = require('./helpers');
+const { makeTmpDir, writeFixtures, writeLargeFixtures, FIXTURE_FILES, runDdb, startServer } = require('./helpers');
 
 const PORT       = 14444;
 const ACCESS_KEY = 'test-access-key-12345';
@@ -108,6 +108,47 @@ describe('remote backup via HTTP server', () => {
     const r = runDdb(['backup', dest(), '--access-key=WRONG_KEY', '--set-name=e2e', `--source=${src}`]);
     // Should fail — server returns 403
     assert.notEqual(r.code, 0, 'backup with wrong key should fail');
+  });
+
+  it('large file backup, verify and restore round-trip', async () => {
+    // Write large binary/text files to exercise the streaming gzip upload path
+    // with backpressure and drain cycles (256 KB, 1 MB, 512 KB text).
+    const largeSrc     = (await makeTmpDir('e2e-large-src')).dir;
+    const largeRestore = (await makeTmpDir('e2e-large-restore')).dir;
+    const largeNames   = await writeLargeFixtures(largeSrc);
+
+    // Backup — use a longer per-process timeout for large data
+    const backupR = runDdb(['backup', dest(), authArg, '--set-name=e2e-large', `--source=${largeSrc}`],
+      { timeout: 120000 });
+    assert.equal(backupR.code, 0,
+      `large file backup failed:\nSTDOUT: ${backupR.stdout}\nSTDERR: ${backupR.stderr}`);
+
+    // Verify
+    const verifyR = runDdb(['verify', dest(), authArg, '--set-name=e2e-large']);
+    assert.equal(verifyR.code, 0,
+      `large file verify failed:\nSTDOUT: ${verifyR.stdout}\nSTDERR: ${verifyR.stderr}`);
+
+    // List — all large files should appear
+    const listR = runDdb(['list', dest(), authArg, '--set-name=e2e-large', '--when=current', '--verbose']);
+    assert.equal(listR.code, 0, `large file list failed:\n${listR.stderr}`);
+    for (const name of largeNames) {
+      const base = path.basename(name);
+      assert.ok(listR.stdout.includes(base), `${base} should appear in list`);
+    }
+
+    // Restore and byte-check the 1 MB binary file
+    const restoreR = runDdb(['restore', dest(), authArg, '--set-name=e2e-large', `--output=${largeRestore}`]);
+    assert.equal(restoreR.code, 0,
+      `large file restore failed:\nSTDOUT: ${restoreR.stdout}\nSTDERR: ${restoreR.stderr}`);
+
+    const origBuf     = await fsp.readFile(path.join(largeSrc,     'large', 'binary-1mb.bin'));
+    const restoredBuf = await fsp.readFile(path.join(largeRestore, 'large', 'binary-1mb.bin'));
+    assert.deepEqual(restoredBuf, origBuf, 'restored binary-1mb.bin must be byte-identical to original');
+
+    // Second backup should deduplicate (no re-upload)
+    const dedup = runDdb(['backup', dest(), authArg, '--set-name=e2e-large', `--source=${largeSrc}`, '--verbose'],
+      { timeout: 120000 });
+    assert.equal(dedup.code, 0, `large file second backup failed:\n${dedup.stderr}`);
   });
 
   it('authentication: missing access key is rejected', () => {

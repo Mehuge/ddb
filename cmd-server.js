@@ -161,8 +161,16 @@ class BackupServer {
       headers = message;
       message = undefined;
     }
-    if (this.verbose) console.log(`${code}${message?' '+message:''}${headers?' '+JSON.stringify(headers):''}`);
-    response.writeHead(code, message, headers);
+
+    if (this.verbose)
+      console.log(`${code}${message?' '+message:''}${headers?' '+JSON.stringify(headers):''}`);
+
+    if (message) {
+      response.writeHead(code, message, headers);
+      return;
+    }
+
+    response.writeHead(code, headers);
   }
 
   expireRunning() {
@@ -380,6 +388,7 @@ class BackupServer {
               }
               body = await BackupServer.getRequestBody(request);
               if (body) {
+                console.log('CHECK', body);
                 const checks = JSON.parse(body);
                 const results = [];
                 for (const { hash, size } of checks) {
@@ -391,6 +400,7 @@ class BackupServer {
                 }
                 this.writeHead(response, 200, 'OK', { 'Content-Type': 'application/json' });
                 response.end(JSON.stringify(results));
+                if (this.verbose) console.log(JSON.stringify(results));
                 return;
               }
               this.writeHead(response, 400, 'missing body');
@@ -412,12 +422,15 @@ class BackupServer {
                   const typeBuf = await reader.readBytes(1);
                   if (!typeBuf) break;
                   const frameType = String.fromCharCode(typeBuf[0]);
+                  console.log('frame type', frameType);
                   const lenBuf = await reader.readBytes(4);
                   if (!lenBuf) break;
                   const headerLen = lenBuf.readUInt32BE(0);
+                  console.log('frame header length', headerLen);
                   const headerBuf = await reader.readBytes(headerLen);
                   if (!headerBuf) break;
                   const header = JSON.parse(headerBuf.toString());
+                  console.log('frame header', JSON.stringify(header));
                   if (frameType === 'L') {
                     logCount++;
                     if (header.type === 'source') {
@@ -437,22 +450,39 @@ class BackupServer {
                     const pass = new PassThrough();
                     const storePromise = target.fs().storeCompressedStream(pass, hash, size);
                     // If storage fails, destroy pass so any pending drain await throws rather than hanging
-                    storePromise.catch(err => pass.destroy(err));
+                    storePromise.catch(err => {
+                      console.log('STORE PROMISE ERROR:', err);
+                      pass.destroy(err);
+                    });
                     let chunkLenBuf;
+                    console.log('READ CHUNK LENGTH');
                     while ((chunkLenBuf = await reader.readBytes(4))) {
                       const chunkLen = chunkLenBuf.readUInt32BE(0);
+                      console.log('CHUNK LEN', chunkLen);
                       if (chunkLen === 0) break;
+                      console.log('READ CHUNK length=', chunkLen);
                       const chunk = await reader.readBytes(chunkLen);
-                      if (!chunk) break;
+                      if (!chunk) {
+                        console.log('NO CHUNK; break');
+                        break;
+                      }
                       if (!pass.write(chunk)) {
+                        // write buffer is full — wait for drain before continuing.
+                        // Use removeListener (not off) with named refs for Bun compat:
+                        // Bun wraps once() listeners internally so off(event, originalFn)
+                        // may silently fail to remove them, leaking listeners and
+                        // corrupting _eventsCount to NaN after ~11 iterations.
                         await new Promise((resolve, reject) => {
-                          const onDrain = () => { pass.off('error', reject); resolve(); };
+                          function onDrain() { pass.removeListener('error', onError); resolve(); }
+                          function onError(err) { pass.removeListener('drain', onDrain); reject(err); }
                           pass.once('drain', onDrain);
-                          pass.once('error', (err) => { pass.off('drain', onDrain); reject(err); });
+                          pass.once('error', onError);
                         });
                       }
                     }
+                    console.log('finished reading chunks (EOF)');
                     pass.end();
+                    console.log('wait until stored on filessystem');
                     const result = await storePromise;
                     if (this.verbose) console.log(`F ${result.stored ? '+' : '='} ${hash} ${size}`);
                     result.stored ? storedCount++ : skippedCount++;
@@ -461,6 +491,7 @@ class BackupServer {
                 }
                 console.log(`${new Date().toISOString()}: batch ${setname} (${op.client}): ${logCount} log entries, ${storedCount} files stored, ${skippedCount} files skipped`);
                 this.writeHead(response, 200, 'OK', { 'Content-Type': 'application/json' });
+                console.log(JSON.stringify(fileResults));
                 response.end(JSON.stringify(fileResults));
                 return;
               }
